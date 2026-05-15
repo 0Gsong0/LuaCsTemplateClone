@@ -1,0 +1,298 @@
+local easySettings = dofile(TL.Path .. "/Lua/Scripts/Config/easysettings.lua")
+local GUIComponent = LuaUserData.CreateStatic("Barotrauma.GUIComponent")
+
+TLConfigGUI = TLConfigGUI or {}
+TLConfigGUI.Root = nil
+TLConfigGUI.IsLoading = false
+TLConfigGUI.LoadRequestId = 0
+TLConfigGUI.EditValues = {}--这次打开配置界面时，玩家正在编辑的值
+TLConfigGUI.Parent = nil
+
+TLConfigGUI.HasReceivedConfig = false --是否已经收到了服务器配置
+TLConfigGUI.LoadingText = nil --保存加载界面里那段提示文字控件，后面超时了可以直接改它的内容。
+TLConfigGUI.LoadFailed = false --记录当前这次加载是否已经超时失败
+
+local loadingSprite = Sprite(TL.Path .. "/Lua/Scripts/Config/TLConfigLoading.png")
+
+function TLConfigGUI.ClearRoot()
+    if TLConfigGUI.Root and TLConfigGUI.Root.Frame then
+        TLConfigGUI.Root.Frame.RectTransform.Parent = nil
+    end
+    TLConfigGUI.Root = nil
+end
+
+function TLConfigGUI.DrawLoading(parent)
+    TLConfigGUI.Parent = parent
+    TLConfigGUI.ClearRoot()
+
+    local ui = easySettings.BasicFrame(parent, "泰拉渊洋配置", Vector2(0.45, 0.75))
+    TLConfigGUI.Root = ui
+    TLConfigGUI.IsLoading = true
+
+    TLConfigGUI.LoadingText = GUI.TextBlock(
+        GUI.RectTransform(Vector2(1, 0.12), ui.List.Content.RectTransform),
+        "正在从服务器同步配置，请稍候……",
+        Color(255, 255, 255),
+        nil,
+        GUI.Alignment.Center
+    )
+    GUI.TextBlock(
+        GUI.RectTransform(Vector2(1, 0.08), ui.List.Content.RectTransform),
+        "Loading...",
+        Color(180, 220, 255),
+        nil,
+        GUI.Alignment.Center
+    )
+    GUI.Image(
+        GUI.RectTransform(Vector2(0.35, 0.25), ui.List.Content.RectTransform, GUI.Anchor.Center),
+        loadingSprite
+    )
+end
+function TLConfigGUI.DrawConfig(parent)
+    TLConfigGUI.ClearRoot()
+
+    local ui = easySettings.BasicFrame(parent, "泰拉渊洋配置", Vector2(0.45, 0.75))
+    TLConfigGUI.Root = ui
+    TLConfigGUI.IsLoading = false
+
+    local canEdit = TLConfigGUI.CanEditConfig()
+
+    for key, entry in pairs(TLConfig.Entries) do
+        if entry.type == "bool" then
+            local tick = GUI.TickBox(
+                GUI.RectTransform(Vector2(1, 0.1), ui.List.Content.RectTransform),
+                entry.name
+            )
+
+            tick.Selected = TLConfigGUI.EditValues[key]
+            tick.ToolTip = entry.description or ""
+
+            if not canEdit then
+                tick.Enabled = false
+                tick.ToolTip = (entry.description or "") .. "\n你无权限修改此配置。"
+            end
+
+            tick.OnSelected = function()
+                local isSelected = tick.State == GUIComponent.ComponentState.Selected
+                TLConfigGUI.EditValues[key] = isSelected
+            end
+
+        elseif entry.type == "float" then
+            local label = GUI.TextBlock(
+                GUI.RectTransform(Vector2(1, 0.06), ui.List.Content.RectTransform),
+                entry.name .. " : " .. string.format("%.1f", TLConfigGUI.EditValues[key]),
+                Color(255, 255, 255),
+                nil,
+                GUI.Alignment.CenterLeft
+            )
+
+            label.ToolTip = entry.description or ""
+
+            local input = GUI.NumberInput(
+                GUI.RectTransform(Vector2(1, 0.08), ui.List.Content.RectTransform),
+                NumberType.Float
+            )
+
+            if entry.range ~= nil then
+                input.MinValueFloat = entry.range[1]
+                input.MaxValueFloat = entry.range[2]
+            end
+
+            if not canEdit then
+                input.Enabled = false
+                label.ToolTip = (entry.description or "") .. "\n你无权限修改此配置。"
+            end
+
+            input.FloatValue = TLConfigGUI.EditValues[key]
+
+            input.OnValueChanged = function()
+                local rounded = tonumber(string.format("%.1f", input.FloatValue))
+                TLConfigGUI.EditValues[key] = rounded
+                label.Text = entry.name .. " : " .. string.format("%.1f", rounded)
+            end
+        end
+    end
+
+    TLConfigGUI.AddButtons(ui, parent)
+end
+function TLConfigGUI.AddButtons(ui, parent)
+    local canEdit = TLConfigGUI.CanEditConfig()
+    local saveButton = GUI.Button(
+        GUI.RectTransform(Vector2(0.32, 1), ui.ButtonRow.RectTransform),
+        "保存",
+        GUI.Alignment.Center,
+        "GUIButton"
+    )
+
+    local closeButton = GUI.Button(
+        GUI.RectTransform(Vector2(0.32, 1), ui.ButtonRow.RectTransform),
+        "关闭",
+        GUI.Alignment.Center,
+        "GUIButton"
+    )
+
+    local resetButton = GUI.Button(
+        GUI.RectTransform(Vector2(0.32, 1), ui.ButtonRow.RectTransform),
+        "恢复默认",
+        GUI.Alignment.Center,
+        "GUIButton"
+    )
+
+    if not canEdit then
+        saveButton.Enabled = false
+        resetButton.Enabled = false
+
+        saveButton.ToolTip = "你不是这台服务器的管理员，没有修改服务器配置的权限。"
+        resetButton.ToolTip = "你不是这台服务器的管理员，没有修改服务器配置的权限。"
+    end
+
+    saveButton.OnClicked = function()
+        TLConfigGUI.ApplyEditValuesToConfig()
+        if Game.IsSingleplayer then
+            TLConfig.SaveConfig()
+
+            local box = GUI.MessageBox(
+                "保存成功",
+                "配置已保存到本地。",
+                { "确定" }
+            )
+
+            box.DrawOnTop = true
+            box.Text.TextAlignment = GUI.Alignment.Center
+            box.Buttons[1].OnClicked = function()
+                box.Close()
+            end
+        elseif Game.IsMultiplayer then
+            local msg = Networking.Start("TL.ConfigUpdate")
+
+            local data = {}
+            for key, entry in pairs(TLConfig.Entries) do
+                data[key] = entry.value
+            end
+
+            msg.WriteString(json.serialize(data))
+            Networking.Send(msg)
+
+            local box = GUI.MessageBox(
+                "已提交",
+                "配置已发送到服务器。",
+                { "确定" }
+            )
+            box.DrawOnTop = true
+            box.Text.TextAlignment = GUI.Alignment.Center
+            box.Buttons[1].OnClicked = function()
+                box.Close()
+            end
+        end
+    end
+
+    closeButton.OnClicked = function()
+        GUI.GUI.TogglePauseMenu()
+    end
+
+    resetButton.OnClicked = function()
+        local box = GUI.MessageBox(
+            "恢复默认",
+            "确定要恢复默认配置吗？",
+            { "确定", "取消" }
+        )
+
+        box.DrawOnTop = true
+        box.Text.TextAlignment = GUI.Alignment.Center
+
+        box.Buttons[1].OnClicked = function()
+            TLConfigGUI.ResetEditValuesToDefaults()
+            TLConfigGUI.DrawConfig(parent)
+            box.Close()
+        end
+
+        box.Buttons[2].OnClicked = function()
+            box.Close()
+        end
+    end
+end
+--开始打开配置页
+function TLConfigGUI.Open(parent)
+    TLConfigGUI.Parent = parent
+    TLConfigGUI.HasReceivedConfig = false
+    TLConfigGUI.LoadFailed = false
+    TLConfigGUI.LoadRequestId = TLConfigGUI.LoadRequestId + 1
+
+    local requestId = TLConfigGUI.LoadRequestId
+
+    TLConfigGUI.DrawLoading(parent)
+
+    if Game.IsSingleplayer then
+        TLConfig.LoadConfig()
+        TLConfigGUI.CopyConfigToEditValues()
+
+        Timer.Wait(function()
+            if TLConfigGUI.Parent ~= nil then
+                TLConfigGUI.DrawConfig(TLConfigGUI.Parent)
+            end
+        end, 1000)
+
+    elseif Game.IsMultiplayer then
+        local msg = Networking.Start("TL.ConfigRequest")
+        Networking.Send(msg)
+
+        Timer.Wait(function()
+            if requestId ~= TLConfigGUI.LoadRequestId then return end
+            if TLConfigGUI.HasReceivedConfig then return end
+            if TLConfigGUI.Root == nil then return end
+
+            TLConfigGUI.LoadFailed = true
+
+            if TLConfigGUI.LoadingText ~= nil then
+                TLConfigGUI.LoadingText.Text = "配置同步失败，请稍后重试。"
+                TLConfigGUI.LoadingText.TextColor = Color(255, 120, 120)
+            end
+        end, 5000)
+    end
+end
+--重置编辑缓存
+function TLConfigGUI.ResetEditValuesToDefaults()
+    for key, entry in pairs(TLConfig.Entries) do
+        TLConfigGUI.EditValues[key] = entry.default
+    end
+end
+--编辑缓存应用回正式配置
+function TLConfigGUI.ApplyEditValuesToConfig()
+    for key, value in pairs(TLConfigGUI.EditValues) do
+        TLConfig.Set(key, value)
+    end
+end
+--从正式配置复制到编辑缓存
+function TLConfigGUI.CopyConfigToEditValues()
+    TLConfigGUI.EditValues = {}
+
+    for key, entry in pairs(TLConfig.Entries) do
+        TLConfigGUI.EditValues[key] = entry.value
+    end
+end
+easySettings.AddMenu("泰拉渊洋", function(parent)
+    TLConfigGUI.Open(parent)
+end)
+--接收来自服务器的配置
+Networking.Receive("TL.ConfigUpdate", function(msg)
+    TLConfig.ReceiveConfig(msg)
+    TLConfigGUI.CopyConfigToEditValues()
+    TLConfigGUI.HasReceivedConfig = true
+    TLConfigGUI.LoadFailed = false
+
+    if TLConfigGUI.Parent ~= nil then
+        TLConfigGUI.DrawConfig(TLConfigGUI.Parent)
+    end
+end)
+--权限检查
+function TLConfigGUI.CanEditConfig()
+    if Game.IsSingleplayer then
+        return true
+    end
+
+    if Game.IsMultiplayer and CLIENT and Game.Client ~= nil then
+        return Game.Client.HasPermission(ClientPermissions.ManageSettings)
+    end
+
+    return false
+end

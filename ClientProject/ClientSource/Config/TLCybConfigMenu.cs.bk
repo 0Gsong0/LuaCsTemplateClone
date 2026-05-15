@@ -1,0 +1,570 @@
+using Barotrauma;
+using Barotrauma.Networking;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+
+namespace TeraDeepOcean
+{
+    public static class TLCybConfigMenu
+    {
+        private enum ConfigTab
+        {
+            System,
+            Cyber
+        }
+        private static GUIFrame rootFrame;
+        private static GUIFrame leftPanel;
+        private static GUIFrame rightPanel;
+        private static GUITextBlock rightTitle;
+        private static GUIListBox rightList;
+
+        private static GUIButton systemTabButton;
+        private static GUIButton cyberTabButton;
+
+        private static GUIButton closeButton;
+        private static GUIButton saveButton;
+        private static GUIButton resetButton;
+
+
+        private static bool created = false;
+        private static bool isOpen = false;
+        private static ConfigTab? currentTab = null;
+
+        private static bool suppressNumberEvent = false;
+
+        public static void Open(GUIFrame frame, GUIListBox list)
+        {
+            CreateIfNeeded(frame, list);
+            isOpen = true;
+            currentTab = null;
+
+
+            if (rootFrame != null)
+            {
+                rootFrame.Visible = true;
+                rootFrame.Enabled = true;
+
+                rootFrame.AddToGUIUpdateList();
+            }
+
+            RefreshRightPanel();
+            RefreshTabVisuals();
+        }
+
+
+        public static void Close()
+        {
+            isOpen = false;
+
+            if (rootFrame != null)
+            {
+                rootFrame.Visible = false;
+                rootFrame.Enabled = false;
+            }
+
+        }
+
+        public static void Update()
+        {
+            if (!isOpen) return;
+            if (rootFrame == null) return;
+
+
+            rootFrame.AddToGUIUpdateList();
+        }
+
+        private static void CreateIfNeeded(GUIFrame frame, GUIListBox list)
+        {
+            if (created) return;
+            if (GUI.Canvas == null) return;
+
+            rootFrame = frame;
+
+            rootFrame.Visible = false;
+            rootFrame.Enabled = false;
+            leftPanel = null;
+            rightPanel = null;
+            rightTitle = null;
+            rightList = null;
+            systemTabButton = null;
+            cyberTabButton = null;
+            saveButton = null;
+            resetButton = null;
+            closeButton = null;
+            // 内容区总容器：左右分栏都放在这里
+            GUIFrame contentRoot = new GUIFrame(
+                new RectTransform(new Vector2(0.98f, 0.98f), list.Content.RectTransform, Anchor.Center),
+                style: null
+            );
+            GUITextBlock title = new GUITextBlock(
+                new RectTransform(new Vector2(0.96f, 0.08f), contentRoot.RectTransform, Anchor.TopCenter),
+                "泰拉渊洋配置系统",
+                textAlignment: Alignment.Center,
+                style: "GUITextBlock"
+            );
+            title.TextScale = 1.5f;
+            if (!CanEditConfig())
+            {
+                new GUITextBlock(
+                    new RectTransform(new Vector2(0.96f, 0.08f), contentRoot.RectTransform, Anchor.TopCenter)
+                    {
+                        AbsoluteOffset = new Point(0, 30)
+                    },
+                    "当前为只读模式：你不是服务器管理员，无权修改配置项目。",
+                    textAlignment: Alignment.Center,
+                    style: "GUITextBlock"
+                );
+            }
+            else
+            {
+                new GUITextBlock(
+                    new RectTransform(new Vector2(0.96f, 0.08f), contentRoot.RectTransform, Anchor.TopCenter)
+                    {
+                        AbsoluteOffset = new Point(0, 30)
+                    },
+                    "当前为编辑模式：你有权修改配置并上传保存。",
+                    textAlignment: Alignment.Center,
+                    style: "GUITextBlock"
+                );
+            }
+            if (!GameMain.IsMultiplayer)
+            {
+                new GUITextBlock(
+                    new RectTransform(new Vector2(0.96f, 0.08f), contentRoot.RectTransform, Anchor.TopCenter)
+                    {
+                        AbsoluteOffset = new Point(0, 55)
+                    },
+                    "当前为单机模式：当前配置内容来自本地，修改后会保存在这台电脑上。",
+                    textAlignment: Alignment.Center,
+                    style: "GUITextBlock"
+                );
+            }
+            else
+            {
+                new GUITextBlock(
+                    new RectTransform(new Vector2(0.96f, 0.08f), contentRoot.RectTransform, Anchor.TopCenter)
+                    {
+                        AbsoluteOffset = new Point(0, 55)
+                    },
+                    "当前为联机模式：当前配置内容来自服务器，修改后将会上传至服务器并保存。",
+                    textAlignment: Alignment.Center,
+                    style: "GUITextBlock"
+                );
+            }
+            leftPanel = new GUIFrame(
+                new RectTransform(new Vector2(0.22f, 0.76f), contentRoot.RectTransform, Anchor.CenterLeft)
+                {
+                    AbsoluteOffset = new Point(15, 10)
+                },
+                style: "InnerFrame"
+            );
+
+            rightPanel = new GUIFrame(
+                new RectTransform(new Vector2(0.7f, 0.76f), contentRoot.RectTransform, Anchor.CenterRight)
+                {
+                    AbsoluteOffset = new Point(45, 10)
+                },
+                style: "InnerFrame"
+            );
+
+            systemTabButton = new GUIButton(
+                new RectTransform(new Vector2(0.88f, 0.12f), leftPanel.RectTransform, Anchor.TopCenter)
+                {
+                    AbsoluteOffset = new Point(0, 20)
+                },
+                "系统",
+                textAlignment: Alignment.Center,
+                style: "GUIButton"
+            );
+            systemTabButton.OnClicked = (button, obj) =>
+            {
+                currentTab = ConfigTab.System;
+                RefreshTabVisuals();
+                RefreshRightPanel();
+                return true;
+            };
+
+            cyberTabButton = new GUIButton(
+                new RectTransform(new Vector2(0.88f, 0.12f), leftPanel.RectTransform, Anchor.TopCenter)
+                {
+                    AbsoluteOffset = new Point(0, 90)
+                },
+                "义体",
+                textAlignment: Alignment.Center,
+                style: "GUIButton"
+            );
+            cyberTabButton.OnClicked = (button, obj) =>
+            {
+                currentTab = ConfigTab.Cyber;
+                RefreshTabVisuals();
+                RefreshRightPanel();
+                return true;
+            };
+
+            rightTitle = new GUITextBlock(
+                new RectTransform(new Vector2(0.92f, 0.10f), rightPanel.RectTransform, Anchor.TopCenter)
+                {
+                    AbsoluteOffset = new Point(0, 20)
+                },
+                "",
+                textAlignment: Alignment.CenterLeft,
+                style: "GUITextBlock"
+            );
+            rightTitle.TextScale = 1.2f;
+            rightList = new GUIListBox(
+                new RectTransform(new Vector2(0.92f, 0.72f), rightPanel.RectTransform, Anchor.TopCenter)
+                {
+                    AbsoluteOffset = new Point(0, 80)
+                },
+                style: "GUIListBox"
+            );
+            bool canEdit = CanEditConfig();
+            saveButton = new GUIButton(
+                new RectTransform(new Vector2(0.18f, 0.08f), contentRoot.RectTransform, Anchor.BottomCenter)
+                {
+                    AbsoluteOffset = new Point(-150, 0)
+                },
+                "保存",
+                textAlignment: Alignment.Center,
+                style: "GUIButton"
+            );
+            resetButton = new GUIButton(
+                new RectTransform(new Vector2(0.18f, 0.08f), contentRoot.RectTransform, Anchor.BottomCenter)
+                {
+                    AbsoluteOffset = new Point(150, 0)
+                },
+                "恢复默认",
+                textAlignment: Alignment.Center,
+                style: "GUIButton"
+            );
+            saveButton.Enabled = canEdit;
+            resetButton.Enabled = canEdit;
+            saveButton.ToolTip = canEdit ? "" : "你不是服务器管理员，无法保存配置。";
+            resetButton.ToolTip = canEdit ? "" : "你不是服务器管理员，无法恢复默认配置。";
+            resetButton.OnClicked = (button, obj) =>
+            {
+                if (!CanEditConfig()) return true;
+                TLCybConfigData.Reset();
+                RefreshRightPanel();
+                return true;
+            };
+            saveButton.OnClicked = (button, obj) =>
+            {
+                if (!CanEditConfig()) return true;
+                TLCybConfigData.Save();
+                return true;
+            };
+            closeButton = new GUIButton(
+                new RectTransform(new Vector2(0.20f, 0.08f), contentRoot.RectTransform, Anchor.BottomCenter)
+                {
+                    AbsoluteOffset = new Point(0, 50)
+                },
+                "关闭",
+                textAlignment: Alignment.Center,
+                style: "GUIButton"
+            );
+            closeButton.OnClicked = (button, obj) =>
+            {
+                Close();
+                return true;
+            };
+            created = true;
+        }
+        private static void ClearRightPanel()
+        {
+            if (rightList == null || rightList.Content == null) return;
+
+            var children = new List<RectTransform>(rightList.Content.RectTransform.Children);
+            foreach (var child in children)
+            {
+                child.Parent = null;
+            }
+
+        }
+        private static void RefreshTabVisuals()
+        {
+            if (systemTabButton != null)
+            {
+                systemTabButton.Color = currentTab == ConfigTab.System
+                    ? new Color(70, 120, 180, 255)
+                    : new Color(255, 255, 255, 200);
+            }
+
+            if (cyberTabButton != null)
+            {
+                cyberTabButton.Color = currentTab == ConfigTab.Cyber
+                    ? new Color(70, 120, 180, 255)
+                    : new Color(255, 255, 255, 200);
+            }
+        }
+        private static Sprite LoadSprite(string spritePath)
+        {
+            var texture = Sprite.LoadTexture(spritePath);
+            if (texture == null) return null;
+            return new Sprite(texture, null, null, 0f, spritePath);
+        }
+        /// <summary>
+        /// 限制步长
+        /// </summary>
+        /// <param name="value"></param>
+        /// <param name="step"></param>
+        /// <returns></returns>
+        private static float SnapToStep(float value, float step)
+        {
+            if (step <= 0f) return value;
+            return (float)System.Math.Round(value / step) * step;
+        }
+
+        private static void RefreshRightPanel()
+        {
+            if (rightTitle == null || rightList == null) return;
+
+            ClearRightPanel();
+
+            if (currentTab == null)
+            {
+                rightTitle.Text = "泰拉渊洋配置系统";
+                rightTitle.TextScale = 1.5f;
+                string spritePath = System.IO.Path.Combine(Plugin.ModDir, "Content", "UI", "泰拉logo.png");
+                spritePath = spritePath.Replace('\\', '/');
+                Sprite iconSprite = LoadSprite(spritePath);
+                GUIImage icon = new GUIImage(
+                    new RectTransform(new Vector2(1f, 0.85f), rightList.Content.RectTransform, Anchor.CenterLeft)
+                    {
+                        AbsoluteOffset = new Point(0, -50)    
+                    },
+                    iconSprite,true
+                );
+                GUITextBlock welcomeText = new GUITextBlock(
+                    new RectTransform(new Vector2(0.9f, 0.12f), rightList.Content.RectTransform, Anchor.BottomCenter)
+                    {
+                        AbsoluteOffset = new Point(0, -100)
+                    },
+                    "请选择左侧分类",
+                    textAlignment: Alignment.Center,
+                    style: "GUITextBlock"
+                );
+
+                welcomeText.TextScale = 1.5f;
+            }
+            else if (currentTab == ConfigTab.System)
+            {
+                rightTitle.Text = "系统";
+
+                AddSectionTitle(rightList.Content, "TL_header_System");
+                AddIntSetting(rightList.Content, "TL_TLUpdateInterval", 2, 1, 5);
+                AddIntSetting(rightList.Content, "TL_TLLateUpdateInterval", 2, 1, 10);
+            }
+            else if (currentTab == ConfigTab.Cyber)
+            {
+                rightTitle.Text = "义体";
+
+                AddSectionTitle(rightList.Content, "TL_header_cyb");
+                AddFloatSetting(rightList.Content, "TL_cybDamageMultiplier", 1.5f, 0.1f, 5f, 0.1f);
+                AddFloatSetting(rightList.Content, "TL_TLCybTripChance", 0.25f, 0f, 1f, 0.1f);
+                AddIntSetting(rightList.Content, "TL_TLCybProtectFallNum", 5, 0, 20);
+                AddIntSetting(rightList.Content, "TLCyb_LycorisSystemDamage_AutoIncrementThreshold", 80, 10, 100);
+                AddIntSetting(rightList.Content, "TLCyb_SystemDamageCrawlThreshold", 60, 10, 100);
+                AddIntSetting(rightList.Content, "TLCyb_ServoDamageCrawlThreshold", 80, 10, 100);
+                AddIntSetting(rightList.Content, "TLCyb_totalDisableScoreoDamageCrawlThreshold", 150, 10, 300);
+            }
+        }
+        /// <summary>
+        /// 添加标签
+        /// </summary>
+        /// <param name="parent"></param>
+        /// <param name="text"></param>
+        /// <returns></returns>
+        private static GUITextBlock AddLabel(RectTransform parent, string text)
+        {
+            GUITextBlock label = new GUITextBlock(
+                new RectTransform(new Vector2(0.96f, 0.08f), parent),
+                text,
+                textAlignment: Alignment.CenterLeft,
+                style: "GUITextBlock"
+            );
+            return label;
+        }
+        /// <summary>
+        /// 通用分类标题
+        /// </summary>
+        /// <param name="parent"></param>
+        /// <param name="text"></param>
+        /// <returns></returns>
+        private static GUITextBlock AddSectionTitle(GUIComponent parent, string key)
+        {
+            string name = TLCybConfigData.GetName(key);
+            string description = TLCybConfigData.GetDescription(key);
+            GUITextBlock title = new GUITextBlock(
+                new RectTransform(new Vector2(0.96f, 0.08f), parent.RectTransform),
+                name,
+                textAlignment: Alignment.CenterLeft,
+                style: "GUITextBlock"
+            );
+            title.toolTip = description;
+            return title;
+        }
+        /// <summary>
+        /// 通用数字设置
+        /// </summary>
+        /// <param name="parent"></param>
+        /// <param name="key"></param>
+        /// <param name="defaultValue"></param>
+        /// <param name="minValue"></param>
+        /// <param name="maxValue"></param>
+        /// <param name="step"></param>
+        /// <param name="decimals"></param>
+        private static void AddFloatSetting(
+            GUIComponent parent,
+            string key,
+            float defaultValue,
+            float minValue,
+            float maxValue,
+            float step,
+            int decimals = 1)
+        {
+            string name = TLCybConfigData.GetName(key);
+            string description = TLCybConfigData.GetDescription(key);
+            float currentValue = TLCybConfigData.GetFloat(key, defaultValue);
+            bool canEdit = CanEditConfig();
+
+            GUITextBlock label = new GUITextBlock(
+                new RectTransform(new Vector2(0.96f, 0.06f), parent.RectTransform),
+                name + " : " + currentValue.ToString("F" + decimals),
+                textAlignment: Alignment.CenterLeft,
+                style: "GUITextBlock"
+            );
+            label.ToolTip = description;
+
+            GUINumberInput input = new GUINumberInput(
+                new RectTransform(new Vector2(0.96f, 0.08f), parent.RectTransform),
+                NumberType.Float
+            );
+
+            input.MinValueFloat = minValue;
+            input.MaxValueFloat = maxValue;
+            input.FloatValue = currentValue;
+            input.ToolTip = description;
+            input.ToolTip = canEdit ? description : GetNoPermissionToolTip(description);
+            input.Enabled = canEdit;
+
+            input.OnValueChanged = numberInput =>
+            {
+                if (!canEdit || suppressNumberEvent) return;
+
+                float snapped = SnapToStep(numberInput.FloatValue, step);
+                snapped = (float)Math.Round(snapped, decimals);
+
+                if (Math.Abs(numberInput.FloatValue - snapped) > 0.0001f)
+                {
+                    suppressNumberEvent = true;
+                    numberInput.FloatValue = snapped;
+                    suppressNumberEvent = false;
+                }
+
+                TLCybConfigData.SetFloat(key, snapped);
+                label.Text = name + " : " + snapped.ToString("F" + decimals);
+            };
+        }
+        /// <summary>
+        /// 通用整数设置
+        /// </summary>
+        /// <param name="parent"></param>
+        /// <param name="key"></param>
+        /// <param name="defaultValue"></param>
+        /// <param name="minValue"></param>
+        /// <param name="maxValue"></param>
+        private static void AddIntSetting(
+            GUIComponent parent,
+            string key,
+            int defaultValue,
+            int minValue,
+            int maxValue)
+        {
+            string name = TLCybConfigData.GetName(key);
+            string description = TLCybConfigData.GetDescription(key);
+            int currentValue = (int)Math.Round(TLCybConfigData.GetFloat(key, defaultValue));
+            bool canEdit = CanEditConfig();
+
+            GUITextBlock label = new GUITextBlock(
+                new RectTransform(new Vector2(0.96f, 0.06f), parent.RectTransform),
+                name + " : " + currentValue,
+                textAlignment: Alignment.CenterLeft,
+                style: "GUITextBlock"
+            );
+            label.ToolTip = description;
+
+            GUINumberInput input = new GUINumberInput(
+                new RectTransform(new Vector2(0.96f, 0.08f), parent.RectTransform),
+                NumberType.Int
+            );
+
+            input.MinValueInt = minValue;
+            input.MaxValueInt = maxValue;
+            input.IntValue = currentValue;
+            input.ToolTip = canEdit ? description : GetNoPermissionToolTip(description);
+            input.Enabled = canEdit;
+
+            input.OnValueChanged = numberInput =>
+            {
+                if (!canEdit) return;
+
+                int value = numberInput.IntValue;
+                TLCybConfigData.SetFloat(key, value);
+                label.Text = name + " : " + value;
+            };
+        }
+
+        /// <summary>
+        /// 通用布尔设置
+        /// </summary>
+        /// <param name="parent"></param>
+        /// <param name="key"></param>
+        /// <param name="defaultValue"></param>
+        /// <returns></returns>
+        private static GUITickBox AddBoolSetting(GUIComponent parent, string key, bool defaultValue)
+        {
+            string name = TLCybConfigData.GetName(key);
+            string description = TLCybConfigData.GetDescription(key);
+            bool value = TLCybConfigData.GetBool(key, defaultValue);
+            bool canEdit = CanEditConfig();
+
+            GUITickBox tick = new GUITickBox(
+                new RectTransform(new Vector2(0.96f, 0.08f), parent.RectTransform),
+                name
+            );
+
+            tick.Selected = value;
+            tick.ToolTip = canEdit ? description : GetNoPermissionToolTip(description);
+            tick.Enabled = canEdit;
+
+            tick.OnSelected = tickBox =>
+            {
+                if (!canEdit) return true;
+
+                TLCybConfigData.SetBool(key, tickBox.Selected);
+                return true;
+            };
+
+            return tick;
+        }
+
+        private static bool CanEditConfig()
+        {
+            if (!GameMain.IsMultiplayer) return true;
+            if (GameMain.Client == null) return false;
+
+            Client myClient = GameMain.Client.MyClient;
+            if (myClient == null) return false;
+
+            return myClient.IsOwner || myClient.HasPermission(ClientPermissions.ManageSettings);
+        }
+        private static string GetNoPermissionToolTip(string original)
+        {
+            string extra = "你不是服务器管理员，无法修改此配置。";
+            if (string.IsNullOrWhiteSpace(original)) return extra;
+            return original + "\n" + extra;
+        }
+
+    }
+}

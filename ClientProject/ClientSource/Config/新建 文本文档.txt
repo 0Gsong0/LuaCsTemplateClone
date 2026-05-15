@@ -1,0 +1,1118 @@
+#region 程序集 Barotrauma, Version=1.12.6.2, Culture=neutral, PublicKeyToken=null
+// D:\APP\Steam\steamapps\common\Barotrauma\LocalMods\LuaCsTemplateClone\Refs\Windows\Barotrauma.dll
+// Decompiled with ICSharpCode.Decompiler 9.1.0.7988
+#endregion
+
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Xml.Linq;
+using Barotrauma.Extensions;
+using Barotrauma.IO;
+using BepInEx.AssemblyPublicizer;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+
+namespace Barotrauma;
+
+public class Sprite
+{
+    [BepInEx.AssemblyPublicizer.OriginalAttributes(TypeAttributes.NestedPrivate)]
+    public class TextureRefCounter
+    {
+        public Texture2D Texture;
+
+        public int RefCount;
+    }
+
+    [BepInEx.AssemblyPublicizer.OriginalAttributes(FieldAttributes.Private)]
+    public Identifier identifier;
+
+    [BepInEx.AssemblyPublicizer.OriginalAttributes(FieldAttributes.Private)]
+    public static readonly List<WeakReference<Sprite>> list = new List<WeakReference<Sprite>>();
+
+    [BepInEx.AssemblyPublicizer.OriginalAttributes(FieldAttributes.Private)]
+    public static readonly Dictionary<Identifier, TextureRefCounter> textureRefCounts = new Dictionary<Identifier, TextureRefCounter>();
+
+    [BepInEx.AssemblyPublicizer.OriginalAttributes(FieldAttributes.Private)]
+    public bool cannotBeLoaded;
+
+    [BepInEx.AssemblyPublicizer.OriginalAttributes(FieldAttributes.Family)]
+    public volatile bool loadingAsync;
+
+    public static readonly Version LastBrokenTiledSpriteGameVersion = new Version(1, 2, 7, 0);
+
+    [BepInEx.AssemblyPublicizer.OriginalAttributes(FieldAttributes.Private)]
+    public Rectangle sourceRect;
+
+    [BepInEx.AssemblyPublicizer.OriginalAttributes(FieldAttributes.Family)]
+    public Vector2 offset;
+
+    [BepInEx.AssemblyPublicizer.OriginalAttributes(FieldAttributes.Family)]
+    public Vector2 origin;
+
+    public Vector2 size = Vector2.One;
+
+    public float rotation;
+
+    public SpriteEffects effects;
+
+    [BepInEx.AssemblyPublicizer.OriginalAttributes(FieldAttributes.Family)]
+    public float depth;
+
+    [BepInEx.AssemblyPublicizer.OriginalAttributes(FieldAttributes.Private)]
+    public Vector2 _relativeOrigin;
+
+    public Identifier Identifier
+    {
+        get
+        {
+            if (identifier.IsEmpty)
+            {
+                identifier = GetIdentifier(SourceElement);
+            }
+
+            return identifier;
+        }
+    }
+
+    public static IEnumerable<Sprite> LoadedSprites
+    {
+        get
+        {
+            List<Sprite> list = null;
+            lock (Sprite.list)
+            {
+                Sprite target;
+                return (from wRef in Sprite.list
+                        select wRef.TryGetTarget(out target) ? target : null into s
+                        where s != null
+                        select s).ToList();
+            }
+        }
+    }
+
+    public Texture2D texture
+    {
+        [BepInEx.AssemblyPublicizer.OriginalAttributes(MethodAttributes.Family)]
+        get;
+        [BepInEx.AssemblyPublicizer.OriginalAttributes(MethodAttributes.Private)]
+        set;
+    }
+
+    public Texture2D Texture
+    {
+        get
+        {
+            EnsureLazyLoaded();
+            return texture;
+        }
+    }
+
+    public bool Loaded
+    {
+        get
+        {
+            if (texture != null)
+            {
+                return !cannotBeLoaded;
+            }
+
+            return false;
+        }
+    }
+
+    public ContentXElement SourceElement
+    {
+        get; [BepInEx.AssemblyPublicizer.OriginalAttributes(MethodAttributes.Private)]
+        set;
+    }
+
+    public bool LazyLoad
+    {
+        get; [BepInEx.AssemblyPublicizer.OriginalAttributes(MethodAttributes.Private)]
+        set;
+    }
+
+    public Rectangle SourceRect
+    {
+        get
+        {
+            return sourceRect;
+        }
+        set
+        {
+            sourceRect = value;
+        }
+    }
+
+    public float Depth
+    {
+        get
+        {
+            return depth;
+        }
+        set
+        {
+            depth = MathHelper.Clamp(value, 0.001f, 0.999f);
+        }
+    }
+
+    public Vector2 Origin
+    {
+        get
+        {
+            return origin;
+        }
+        set
+        {
+            origin = value;
+            _relativeOrigin = new Vector2(origin.X / (float)sourceRect.Width, origin.Y / (float)sourceRect.Height);
+        }
+    }
+
+    public Vector2 RelativeOrigin
+    {
+        get
+        {
+            return _relativeOrigin;
+        }
+        set
+        {
+            _relativeOrigin = value;
+            origin = new Vector2(_relativeOrigin.X * (float)sourceRect.Width, _relativeOrigin.Y * (float)sourceRect.Height);
+        }
+    }
+
+    public Vector2 RelativeSize
+    {
+        get; [BepInEx.AssemblyPublicizer.OriginalAttributes(MethodAttributes.Private)]
+        set;
+    }
+
+    public ContentPath FilePath
+    {
+        get; [BepInEx.AssemblyPublicizer.OriginalAttributes(MethodAttributes.Private)]
+        set;
+    }
+
+    public string FullPath => FilePath.FullPath;
+
+    public bool Compress
+    {
+        get; [BepInEx.AssemblyPublicizer.OriginalAttributes(MethodAttributes.Private)]
+        set;
+    }
+
+    public Identifier EntityIdentifier { get; set; }
+
+    public string Name { get; set; }
+
+    public Sprite(Sprite other)
+        : this(other.texture, other.sourceRect, other.offset, other.rotation, other.FilePath.Value)
+    {
+        Compress = other.Compress;
+        size = other.size;
+        effects = other.effects;
+    }
+
+    public Sprite(Texture2D texture, Rectangle? sourceRectangle, Vector2? newOffset, float newRotation = 0f, string path = null)
+    {
+        this.texture = texture;
+        sourceRect = sourceRectangle ?? new Rectangle(0, 0, texture.Width, texture.Height);
+        offset = newOffset ?? Vector2.Zero;
+        size = new Vector2(sourceRect.Width, sourceRect.Height);
+        origin = Vector2.Zero;
+        effects = SpriteEffects.None;
+        rotation = newRotation;
+        FilePath = ContentPath.FromRaw(path);
+        AddToList(this);
+        if (string.IsNullOrEmpty(path))
+        {
+            return;
+        }
+
+        Identifier key = Barotrauma.IO.Path.GetFullPath(path).CleanUpPathCrossPlatform(correctFilenameCase: false).ToIdentifier();
+        lock (list)
+        {
+            if (!textureRefCounts.TryAdd(key, new TextureRefCounter
+            {
+                RefCount = 1,
+                Texture = texture
+            }))
+            {
+                textureRefCounts[key].RefCount++;
+            }
+        }
+    }
+
+    public async Task LazyLoadAsync()
+    {
+        await Task.Yield();
+        if (LazyLoad && texture == null && !cannotBeLoaded && !loadingAsync)
+        {
+            EnsureLazyLoaded(isAsync: true);
+        }
+    }
+
+    public void EnsureLazyLoaded(bool isAsync = false)
+    {
+        if (!LazyLoad || texture != null || cannotBeLoaded || loadingAsync)
+        {
+            return;
+        }
+
+        loadingAsync = isAsync;
+        Vector4 sourceVector = Vector4.Zero;
+        bool shouldReturn = false;
+        int num = (Barotrauma.IO.File.Exists(FilePath) ? 3 : 0);
+        for (int i = 0; i <= num; i++)
+        {
+            try
+            {
+                LoadTexture(ref sourceVector, ref shouldReturn);
+            }
+            catch (IOException)
+            {
+                if (i == num || !Barotrauma.IO.File.Exists(FilePath))
+                {
+                    throw;
+                }
+
+                DebugConsole.NewMessage("Loading sprite \"" + FilePath?.ToString() + "\" failed, retrying in 250 ms...");
+                Thread.Sleep(500);
+            }
+        }
+
+        if (sourceRect.Width == 0 && sourceRect.Height == 0)
+        {
+            sourceRect = new Rectangle((int)sourceVector.X, (int)sourceVector.Y, (int)sourceVector.Z, (int)sourceVector.W);
+            size = SourceElement.GetAttributeVector2("size", Vector2.One);
+            size.X *= sourceRect.Width;
+            size.Y *= sourceRect.Height;
+            RelativeOrigin = SourceElement.GetAttributeVector2("origin", new Vector2(0.5f, 0.5f));
+        }
+
+        if (texture == null)
+        {
+            cannotBeLoaded = true;
+        }
+    }
+
+    public void ReloadTexture()
+    {
+        Texture2D texture2D = texture;
+        if (texture == null)
+        {
+            DebugConsole.ThrowError("Sprite: Failed to reload the texture, texture is null.");
+            return;
+        }
+
+        texture.Dispose();
+        texture = TextureLoader.FromFile(FilePath.Value, Compress, mipmap: false, SourceElement?.ContentPackage);
+        Identifier key = FullPath.ToIdentifier();
+        if (textureRefCounts.ContainsKey(key))
+        {
+            textureRefCounts[key].Texture = texture;
+        }
+
+        foreach (Sprite loadedSprite in LoadedSprites)
+        {
+            if (loadedSprite.texture == texture2D)
+            {
+                loadedSprite.texture = texture;
+            }
+        }
+    }
+
+    public static Texture2D LoadTexture(string file, bool compress = true, ContentPackage contentPackage = null)
+    {
+        if (string.IsNullOrWhiteSpace(file))
+        {
+            Texture2D t = null;
+            CrossThread.RequestExecutionOnMainThread(delegate
+            {
+                t = new Texture2D(GameMain.GraphicsDeviceManager.GraphicsDevice, 1, 1);
+            });
+            return t;
+        }
+
+        Identifier key = Barotrauma.IO.Path.GetFullPath(file).CleanUpPathCrossPlatform(correctFilenameCase: false).ToIdentifier();
+        lock (list)
+        {
+            if (textureRefCounts.ContainsKey(key))
+            {
+                textureRefCounts[key].RefCount++;
+                return textureRefCounts[key].Texture;
+            }
+        }
+
+        if (Barotrauma.IO.File.Exists(file))
+        {
+            ToolBox.IsProperFilenameCase(file);
+            Texture2D newTexture = TextureLoader.FromFile(file, compress, mipmap: false, contentPackage);
+            lock (list)
+            {
+                if (!textureRefCounts.TryAdd(key, new TextureRefCounter
+                {
+                    RefCount = 1,
+                    Texture = newTexture
+                }))
+                {
+                    CrossThread.RequestExecutionOnMainThread(delegate
+                    {
+                        newTexture.Dispose();
+                    });
+                    textureRefCounts[key].RefCount++;
+                    return textureRefCounts[key].Texture;
+                }
+            }
+
+            return newTexture;
+        }
+
+        DebugConsole.ThrowError("Sprite \"" + file + "\" not found!", null, contentPackage);
+        DebugConsole.Log(Environment.StackTrace.CleanupStackTrace());
+        return null;
+    }
+
+    public void Draw(ISpriteBatch spriteBatch, Vector2 pos, float rotate = 0f, float scale = 1f, SpriteEffects spriteEffect = SpriteEffects.None)
+    {
+        Draw(spriteBatch, pos, Color.White, rotate, scale, spriteEffect);
+    }
+
+    public void Draw(ISpriteBatch spriteBatch, Vector2 pos, Color color, float rotate = 0f, float scale = 1f, SpriteEffects spriteEffect = SpriteEffects.None, float? depth = null)
+    {
+        Draw(spriteBatch, pos, color, origin, rotate, new Vector2(scale, scale), spriteEffect, depth);
+    }
+
+    public void Draw(ISpriteBatch spriteBatch, Vector2 pos, Color color, Vector2 origin, float rotate = 0f, float scale = 1f, SpriteEffects spriteEffect = SpriteEffects.None, float? depth = null)
+    {
+        Draw(spriteBatch, pos, color, origin, rotate, new Vector2(scale, scale), spriteEffect, depth);
+    }
+
+    public virtual void Draw(ISpriteBatch spriteBatch, Vector2 pos, Color color, Vector2 origin, float rotate, Vector2 scale, SpriteEffects spriteEffect = SpriteEffects.None, float? depth = null)
+    {
+        if (Texture != null)
+        {
+            spriteBatch.Draw(texture, pos + offset, sourceRect, color, rotation + rotate, origin, scale, spriteEffect, depth ?? this.depth);
+        }
+    }
+
+    public void DrawSilhouette(SpriteBatch spriteBatch, Vector2 pos, Vector2 origin, float rotate, Vector2 scale, SpriteEffects spriteEffect = SpriteEffects.None, float? depth = null)
+    {
+        if (Texture == null)
+        {
+            return;
+        }
+
+        for (int i = -1; i <= 1; i += 2)
+        {
+            for (int j = -1; j <= 1; j += 2)
+            {
+                spriteBatch.Draw(texture, pos + offset + new Vector2(i, j), sourceRect, Color.Black, rotation + rotate, origin, scale, spriteEffect, (depth ?? this.depth) + 0.01f);
+            }
+        }
+    }
+
+    public void DrawTiled(ISpriteBatch spriteBatch, Vector2 position, Vector2 targetSize, float rotation = 0f, Vector2? origin = null, Color? color = null, Vector2? startOffset = null, Vector2? textureScale = null, float? depth = null)
+    {
+        DrawTiled(spriteBatch, position, targetSize, effects, rotation, origin, color, startOffset, textureScale, depth);
+    }
+
+    public void DrawTiled(ISpriteBatch spriteBatch, Vector2 position, Vector2 targetSize, SpriteEffects spriteEffects, float rotation = 0f, Vector2? origin = null, Color? color = null, Vector2? startOffset = null, Vector2? textureScale = null, float? depth = null)
+    {
+        if (Texture == null)
+        {
+            return;
+        }
+
+        bool flipHorizontal = (spriteEffects & SpriteEffects.FlipHorizontally) == SpriteEffects.FlipHorizontally;
+        bool flipVertical = (spriteEffects & SpriteEffects.FlipVertically) == SpriteEffects.FlipVertically;
+        float addedRotation = rotation + this.rotation;
+        if (flipHorizontal != flipVertical)
+        {
+            addedRotation = 0f - addedRotation;
+        }
+
+        Vector2 advanceX = ((addedRotation == 0f) ? Vector2.UnitX : new Vector2((float)Math.Cos(addedRotation), (float)Math.Sin(addedRotation)));
+        Vector2 advanceY = new Vector2(0f - advanceX.Y, advanceX.X);
+        Vector2 vector = startOffset ?? Vector2.Zero;
+        Vector2 scale = textureScale ?? Vector2.One;
+        Color drawColor = color ?? Color.White;
+        Vector2 transformedOrigin = origin ?? Vector2.Zero;
+        transformedOrigin = advanceX * transformedOrigin.X + advanceY * transformedOrigin.Y;
+        vector.X = vector.X / scale.X % (float)sourceRect.Width;
+        vector.Y = vector.Y / scale.Y % (float)sourceRect.Height;
+        int num = (int)Math.Ceiling((targetSize.X + vector.X * scale.X) / ((float)sourceRect.Width * scale.X));
+        int num2 = (int)Math.Ceiling((targetSize.Y + vector.Y * scale.Y) / ((float)sourceRect.Height * scale.Y));
+        Vector2 slicePos = -vector;
+        Rectangle sliceRect = sourceRect;
+        for (int i = 0; i < num; i++)
+        {
+            sliceRect.X = sourceRect.X;
+            sliceRect.Width = sourceRect.Width;
+            sliceRect.Height = sourceRect.Height;
+            if (slicePos.X < 0f)
+            {
+                float num3 = 0f - slicePos.X;
+                slicePos.X += num3;
+                sliceRect.Width -= (int)num3;
+                sliceRect.X += (int)num3;
+            }
+
+            if (i == num - 1)
+            {
+                int num4 = (int)((slicePos.X + (float)sliceRect.Width * scale.X - targetSize.X) / scale.X);
+                sliceRect.Width -= num4;
+            }
+
+            slicePos.Y = 0f - vector.Y;
+            for (int j = 0; j < num2; j++)
+            {
+                sliceRect.Y = sourceRect.Y;
+                sliceRect.Height = sourceRect.Height;
+                if (slicePos.Y < 0f)
+                {
+                    float num5 = 0f - slicePos.Y;
+                    slicePos.Y += num5;
+                    sliceRect.Height -= (int)num5;
+                    sliceRect.Y += (int)num5;
+                }
+
+                if (j == num2 - 1)
+                {
+                    int num6 = (int)((slicePos.Y + (float)sliceRect.Height * scale.Y - targetSize.Y) / scale.Y);
+                    sliceRect.Height -= num6;
+                }
+
+                drawSection(slicePos, sliceRect);
+                slicePos.Y += (float)sliceRect.Height * scale.Y;
+            }
+
+            slicePos.X += (float)sliceRect.Width * scale.X;
+        }
+
+        void drawSection(Vector2 vector3, Rectangle value)
+        {
+            Vector2 vector2 = vector3;
+            if (flipHorizontal)
+            {
+                vector2.X = targetSize.X - vector2.X - (float)value.Width * scale.X;
+            }
+
+            if (flipVertical)
+            {
+                vector2.Y = targetSize.Y - vector2.Y - (float)value.Height * scale.Y;
+            }
+
+            vector2 = advanceX * vector2.X + advanceY * vector2.Y;
+            vector2 += position - transformedOrigin;
+            spriteBatch.Draw(texture, vector2, value, drawColor, addedRotation, Vector2.Zero, scale, spriteEffects, depth ?? this.depth);
+        }
+    }
+
+    public override string ToString()
+    {
+        string? obj = FilePath?.ToString();
+        Rectangle rectangle = sourceRect;
+        return obj + ": " + rectangle.ToString();
+    }
+
+    [BepInEx.AssemblyPublicizer.OriginalAttributes(MethodAttributes.Private)]
+    public void LoadTexture(ref Vector4 sourceVector, ref bool shouldReturn)
+    {
+        texture = LoadTexture(FilePath.Value, Compress, SourceElement?.ContentPackage);
+        if (texture == null)
+        {
+            shouldReturn = true;
+            return;
+        }
+
+        if (sourceVector.Z == 0f)
+        {
+            sourceVector.Z = texture.Width;
+        }
+
+        if (sourceVector.W == 0f)
+        {
+            sourceVector.W = texture.Height;
+        }
+    }
+
+    [BepInEx.AssemblyPublicizer.OriginalAttributes(MethodAttributes.Private)]
+    public void CalculateSourceRect()
+    {
+        sourceRect = new Rectangle(0, 0, texture.Width, texture.Height);
+    }
+
+    [BepInEx.AssemblyPublicizer.OriginalAttributes(MethodAttributes.Private)]
+    public static void AddToList(Sprite sprite)
+    {
+        lock (list)
+        {
+            list.Add(new WeakReference<Sprite>(sprite));
+        }
+    }
+
+    public Sprite(ContentXElement element, string path = "", string file = "", bool lazyLoad = false, float sourceRectScale = 1f)
+    {
+        if ((object)element == null)
+        {
+            DebugConsole.ThrowError("Sprite: xml element null in " + file + ". Failed to create the sprite!");
+            return;
+        }
+
+        LazyLoad = lazyLoad;
+        SourceElement = element;
+        if (ParseTexturePath(path, file))
+        {
+            Name = SourceElement.GetAttributeString("name", null);
+            Vector4 sourceVector = SourceElement.GetAttributeVector4("sourcerect", Vector4.Zero);
+            XElement localizationOverrideElement = GetLocalizationOverrideElement();
+            if (localizationOverrideElement != null && localizationOverrideElement.Attribute("sourcerect") != null)
+            {
+                sourceVector = localizationOverrideElement.GetAttributeVector4("sourcerect", Vector4.Zero);
+            }
+
+            if ((localizationOverrideElement ?? ((XElement?)SourceElement)).Attribute("sheetindex") != null)
+            {
+                Point attributePoint = (localizationOverrideElement ?? ((XElement?)SourceElement)).GetAttributePoint("sheetelementsize", Point.Zero);
+                Point attributePoint2 = (localizationOverrideElement ?? ((XElement?)SourceElement)).GetAttributePoint("sheetindex", Point.Zero);
+                sourceVector = new Vector4(attributePoint2.X * attributePoint.X, attributePoint2.Y * attributePoint.Y, attributePoint.X, attributePoint.Y);
+            }
+
+            Compress = SourceElement.GetAttributeBool("compress", def: true);
+            bool shouldReturn = false;
+            if (!lazyLoad)
+            {
+                LoadTexture(ref sourceVector, ref shouldReturn);
+            }
+
+            if (!shouldReturn)
+            {
+                sourceRect = new Rectangle((int)(sourceVector.X * sourceRectScale), (int)(sourceVector.Y * sourceRectScale), (int)(sourceVector.Z * sourceRectScale), (int)(sourceVector.W * sourceRectScale));
+                size = SourceElement.GetAttributeVector2("size", Vector2.One);
+                RelativeSize = size;
+                size.X *= sourceRect.Width;
+                size.Y *= sourceRect.Height;
+                RelativeOrigin = SourceElement.GetAttributeVector2("origin", new Vector2(0.5f, 0.5f));
+                Depth = SourceElement.GetAttributeFloat("depth", 0.001f);
+                AddToList(this);
+            }
+        }
+    }
+
+    [BepInEx.AssemblyPublicizer.OriginalAttributes(MethodAttributes.Assembly)]
+    public void LoadParams(RagdollParams.SpriteParams spriteParams, bool isFlipped)
+    {
+        SourceElement = spriteParams.Element;
+        sourceRect = spriteParams.SourceRect;
+        RelativeOrigin = spriteParams.Origin;
+        if (isFlipped)
+        {
+            Origin = new Vector2((float)sourceRect.Width - origin.X, origin.Y);
+        }
+
+        depth = spriteParams.Depth;
+    }
+
+    public Sprite(string newFile, Vector2 newOrigin)
+    {
+        Vector2? newOrigin2 = newOrigin;
+        Init(newFile, null, newOrigin2);
+        AddToList(this);
+    }
+
+    public Sprite(string newFile, Rectangle? sourceRectangle, Vector2? origin = null, float rotation = 0f)
+    {
+        Init(newFile, sourceRectangle, origin, null, rotation);
+        AddToList(this);
+    }
+
+    [BepInEx.AssemblyPublicizer.OriginalAttributes(MethodAttributes.Private)]
+    public void Init(string newFile, Rectangle? sourceRectangle = null, Vector2? newOrigin = null, Vector2? newOffset = null, float newRotation = 0f)
+    {
+        FilePath = ContentPath.FromRaw(newFile);
+        Vector4 sourceVector = Vector4.Zero;
+        bool shouldReturn = false;
+        LoadTexture(ref sourceVector, ref shouldReturn);
+        if (!shouldReturn)
+        {
+            if (sourceRectangle.HasValue)
+            {
+                sourceRect = sourceRectangle.Value;
+            }
+            else
+            {
+                CalculateSourceRect();
+            }
+
+            offset = newOffset ?? Vector2.Zero;
+            if (newOrigin.HasValue)
+            {
+                RelativeOrigin = newOrigin.Value;
+            }
+
+            size = new Vector2(sourceRect.Width, sourceRect.Height);
+            rotation = newRotation;
+        }
+    }
+
+    public static Identifier GetIdentifier(XElement sourceElement)
+    {
+        if (sourceElement == null)
+        {
+            return "".ToIdentifier();
+        }
+
+        XElement parent = sourceElement.Parent;
+        return $"{sourceElement}{parent?.ToString() ?? ""}".ToIdentifier();
+    }
+
+    [BepInEx.AssemblyPublicizer.OriginalAttributes(MethodAttributes.Private)]
+    public static void RemoveFromList(Sprite sprite)
+    {
+        lock (list)
+        {
+            list.RemoveAll((WeakReference<Sprite> wRef) => !wRef.TryGetTarget(out var target) || target == sprite);
+        }
+    }
+
+    public void Remove()
+    {
+        RemoveFromList(this);
+        DisposeTexture();
+    }
+
+    [BepInEx.AssemblyPublicizer.OriginalAttributes(MethodAttributes.Family)]
+    ~Sprite()
+    {
+        Remove();
+    }
+
+    [BepInEx.AssemblyPublicizer.OriginalAttributes(MethodAttributes.Private)]
+    public void DisposeTexture()
+    {
+        if (texture == null)
+        {
+            return;
+        }
+
+        lock (list)
+        {
+            if (!FilePath.IsNullOrEmpty())
+            {
+                Identifier key = FullPath.ToIdentifier();
+                if (!key.IsEmpty && textureRefCounts.ContainsKey(key))
+                {
+                    textureRefCounts[key].RefCount--;
+                    if (textureRefCounts[key].RefCount > 0)
+                    {
+                        texture = null;
+                        FilePath = ContentPath.Empty;
+                        return;
+                    }
+
+                    textureRefCounts.Remove(key);
+                }
+            }
+        }
+
+        CrossThread.RequestExecutionOnMainThread(delegate
+        {
+            texture.Dispose();
+        });
+        texture = null;
+    }
+
+    public void ReloadXML()
+    {
+        if (SourceElement == (ContentXElement)null)
+        {
+            return;
+        }
+
+        string text = SourceElement.ParseContentPathFromUri();
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            DebugConsole.NewMessage($"[Sprite] Could not parse the content path from the source element ({SourceElement}) uri: {SourceElement.BaseUri}", Color.Yellow);
+            return;
+        }
+
+        XDocument xDocument = XMLExtensions.TryLoadXml(text);
+        if (xDocument == null || (string.IsNullOrWhiteSpace(Name) && string.IsNullOrWhiteSpace(EntityIdentifier.Value)))
+        {
+            return;
+        }
+
+        IEnumerable<XElement> source = xDocument.Descendants("sprite").Concat(xDocument.Descendants("Sprite"));
+        IEnumerable<XElement> source2 = source.Where((XElement e) => e.GetAttributeString("name", null) == Name);
+        if (source2.None())
+        {
+            source2 = source.Where((XElement e) => e.Parent?.GetAttributeString("identifier", null) == EntityIdentifier);
+            if (source2.None())
+            {
+                source2 = source.Where((XElement e) => e.Parent?.GetAttributeString("name", null) == Name);
+            }
+        }
+
+        if (source2.Multiple())
+        {
+            DebugConsole.NewMessage($"[Sprite] Multiple matching elements found by name ({Name}) or identifier ({EntityIdentifier})!: {SourceElement}", Color.Yellow);
+        }
+        else if (source2.None())
+        {
+            DebugConsole.NewMessage($"[Sprite] Cannot find matching source element by comparing the name attribute ({Name}) or identifier ({EntityIdentifier})! Cannot reload the xml for sprite element \"{SourceElement.ToString()}\"!", Color.Yellow);
+        }
+        else
+        {
+            SourceElement = source2.Single().FromPackage(SourceElement.ContentPackage);
+        }
+
+        if (SourceElement != (ContentXElement)null)
+        {
+            sourceRect = SourceElement.GetAttributeRect("sourcerect", Rectangle.Empty);
+            XElement localizationOverrideElement = GetLocalizationOverrideElement();
+            if (localizationOverrideElement != null && localizationOverrideElement.Attribute("sourcerect") != null)
+            {
+                sourceRect = localizationOverrideElement.GetAttributeRect("sourcerect", Rectangle.Empty);
+            }
+
+            if ((localizationOverrideElement ?? ((XElement?)SourceElement)).Attribute("sheetindex") != null)
+            {
+                Point attributePoint = (localizationOverrideElement ?? ((XElement?)SourceElement)).GetAttributePoint("sheetelementsize", Point.Zero);
+                Point attributePoint2 = (localizationOverrideElement ?? ((XElement?)SourceElement)).GetAttributePoint("sheetindex", Point.Zero);
+                sourceRect = new Rectangle(attributePoint2.X * attributePoint.X, attributePoint2.Y * attributePoint.Y, attributePoint.X, attributePoint.Y);
+            }
+
+            size = SourceElement.GetAttributeVector2("size", Vector2.One);
+            size.X *= sourceRect.Width;
+            size.Y *= sourceRect.Height;
+            RelativeOrigin = SourceElement.GetAttributeVector2("origin", new Vector2(0.5f, 0.5f));
+            Depth = SourceElement.GetAttributeFloat("depth", 0.001f);
+        }
+    }
+
+    public bool ParseTexturePath(string path = "", string file = "")
+    {
+        if (file == "")
+        {
+            file = SourceElement.GetAttributeStringUnrestricted("texture", "");
+            XElement localizationOverrideElement = GetLocalizationOverrideElement();
+            if (localizationOverrideElement != null)
+            {
+                string attributeStringUnrestricted = localizationOverrideElement.GetAttributeStringUnrestricted("texture", "");
+                if (!string.IsNullOrEmpty(attributeStringUnrestricted))
+                {
+                    file = attributeStringUnrestricted;
+                }
+            }
+        }
+
+        if (file == "")
+        {
+            DebugConsole.ThrowError("Sprite " + SourceElement.Element?.ToString() + " doesn't have a texture specified!", null, SourceElement.ContentPackage);
+            return false;
+        }
+
+        if (!string.IsNullOrEmpty(path) && !path.EndsWith("/"))
+        {
+            path += "/";
+        }
+
+        FilePath = ContentPath.FromRaw(SourceElement.ContentPackage, (path + file).CleanUpPathCrossPlatform());
+        return true;
+    }
+
+    [BepInEx.AssemblyPublicizer.OriginalAttributes(MethodAttributes.Private)]
+    public XElement GetLocalizationOverrideElement()
+    {
+        foreach (ContentXElement item in SourceElement.Elements())
+        {
+            if (item.Name.ToString().Equals("override", StringComparison.OrdinalIgnoreCase))
+            {
+                LanguageIdentifier languageIdentifier = item.GetAttributeIdentifier("language", "").ToLanguageIdentifier();
+                if (GameSettings.CurrentConfig.Language == languageIdentifier)
+                {
+                    return item;
+                }
+            }
+        }
+
+        return null;
+    }
+}
+#if false // 反编译日志
+缓存中的 185 项
+------------------
+解析: "System.Collections, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+找到单个程序集: "System.Collections, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+从以下位置加载: "C:\Users\24564\.nuget\packages\microsoft.netcore.app.ref\8.0.25\ref\net8.0\System.Collections.dll"
+------------------
+解析: "XNATypes, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null"
+找到单个程序集: "XNATypes, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null"
+从以下位置加载: "D:\APP\Steam\steamapps\common\Barotrauma\LocalMods\LuaCsTemplateClone\Refs\XNATypes.dll"
+------------------
+解析: "Farseer.NetStandard, Version=3.5.0.0, Culture=neutral, PublicKeyToken=null"
+找到单个程序集: "Farseer.NetStandard, Version=3.5.0.0, Culture=neutral, PublicKeyToken=null"
+从以下位置加载: "D:\APP\Steam\steamapps\common\Barotrauma\LocalMods\LuaCsTemplateClone\Refs\Farseer.NetStandard.dll"
+------------------
+解析: "System.Runtime, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+找到单个程序集: "System.Runtime, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+从以下位置加载: "C:\Users\24564\.nuget\packages\microsoft.netcore.app.ref\8.0.25\ref\net8.0\System.Runtime.dll"
+------------------
+解析: "MonoGame.Framework.Windows.NetStandard, Version=3.7.0.0, Culture=neutral, PublicKeyToken=null"
+找到单个程序集: "MonoGame.Framework.Windows.NetStandard, Version=3.7.0.0, Culture=neutral, PublicKeyToken=null"
+从以下位置加载: "D:\APP\Steam\steamapps\common\Barotrauma\LocalMods\LuaCsTemplateClone\Refs\MonoGame.Framework.Windows.NetStandard.dll"
+------------------
+解析: "BarotraumaCore, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null"
+找到单个程序集: "BarotraumaCore, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null"
+从以下位置加载: "D:\APP\Steam\steamapps\common\Barotrauma\LocalMods\LuaCsTemplateClone\Refs\Windows\BarotraumaCore.dll"
+------------------
+解析: "System.Xml.XDocument, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+找到单个程序集: "System.Xml.XDocument, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+从以下位置加载: "C:\Users\24564\.nuget\packages\microsoft.netcore.app.ref\8.0.25\ref\net8.0\System.Xml.XDocument.dll"
+------------------
+解析: "System.Collections.Immutable, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+找到单个程序集: "System.Collections.Immutable, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+从以下位置加载: "C:\Users\24564\.nuget\packages\microsoft.netcore.app.ref\8.0.25\ref\net8.0\System.Collections.Immutable.dll"
+------------------
+解析: "System.Collections.Concurrent, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+找到单个程序集: "System.Collections.Concurrent, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+从以下位置加载: "C:\Users\24564\.nuget\packages\microsoft.netcore.app.ref\8.0.25\ref\net8.0\System.Collections.Concurrent.dll"
+------------------
+解析: "SharpFont.NetStandard, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null"
+无法按名称“SharpFont.NetStandard, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null”查找 
+------------------
+解析: "System.Threading, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+找到单个程序集: "System.Threading, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+从以下位置加载: "C:\Users\24564\.nuget\packages\microsoft.netcore.app.ref\8.0.25\ref\net8.0\System.Threading.dll"
+------------------
+解析: "System.Threading.Thread, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+找到单个程序集: "System.Threading.Thread, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+从以下位置加载: "C:\Users\24564\.nuget\packages\microsoft.netcore.app.ref\8.0.25\ref\net8.0\System.Threading.Thread.dll"
+------------------
+解析: "System.IO.FileSystem.Watcher, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+找到单个程序集: "System.IO.FileSystem.Watcher, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+从以下位置加载: "C:\Users\24564\.nuget\packages\microsoft.netcore.app.ref\8.0.25\ref\net8.0\System.IO.FileSystem.Watcher.dll"
+------------------
+解析: "System.Linq, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+找到单个程序集: "System.Linq, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+从以下位置加载: "C:\Users\24564\.nuget\packages\microsoft.netcore.app.ref\8.0.25\ref\net8.0\System.Linq.dll"
+------------------
+解析: "Facepunch.Steamworks.Win64, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null"
+无法按名称“Facepunch.Steamworks.Win64, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null”查找 
+------------------
+解析: "EosInterface, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null"
+无法按名称“EosInterface, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null”查找 
+------------------
+解析: "System.Text.RegularExpressions, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+找到单个程序集: "System.Text.RegularExpressions, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+从以下位置加载: "C:\Users\24564\.nuget\packages\microsoft.netcore.app.ref\8.0.25\ref\net8.0\System.Text.RegularExpressions.dll"
+------------------
+解析: "MoonSharp.Interpreter, Version=2.0.0.0, Culture=neutral, PublicKeyToken=null"
+找到单个程序集: "MoonSharp.Interpreter, Version=2.0.0.0, Culture=neutral, PublicKeyToken=null"
+从以下位置加载: "D:\APP\Steam\steamapps\common\Barotrauma\LocalMods\LuaCsTemplateClone\Refs\MoonSharp.Interpreter.dll"
+------------------
+解析: "System.ComponentModel.TypeConverter, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+找到单个程序集: "System.ComponentModel.TypeConverter, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+从以下位置加载: "C:\Users\24564\.nuget\packages\microsoft.netcore.app.ref\8.0.25\ref\net8.0\System.ComponentModel.TypeConverter.dll"
+------------------
+解析: "System.Xml.ReaderWriter, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+找到单个程序集: "System.Xml.ReaderWriter, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+从以下位置加载: "C:\Users\24564\.nuget\packages\microsoft.netcore.app.ref\8.0.25\ref\net8.0\System.Xml.ReaderWriter.dll"
+------------------
+解析: "NVorbis, Version=0.8.6.0, Culture=neutral, PublicKeyToken=null"
+无法按名称“NVorbis, Version=0.8.6.0, Culture=neutral, PublicKeyToken=null”查找 
+------------------
+解析: "Concentus.NetStandard, Version=1.1.6.0, Culture=neutral, PublicKeyToken=null"
+无法按名称“Concentus.NetStandard, Version=1.1.6.0, Culture=neutral, PublicKeyToken=null”查找 
+------------------
+解析: "System.Diagnostics.Process, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+找到单个程序集: "System.Diagnostics.Process, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+从以下位置加载: "C:\Users\24564\.nuget\packages\microsoft.netcore.app.ref\8.0.25\ref\net8.0\System.Diagnostics.Process.dll"
+------------------
+解析: "System.IO.Pipes, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+找到单个程序集: "System.IO.Pipes, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+从以下位置加载: "C:\Users\24564\.nuget\packages\microsoft.netcore.app.ref\8.0.25\ref\net8.0\System.IO.Pipes.dll"
+------------------
+解析: "Lidgren.NetStandard, Version=2012.1.7.0, Culture=neutral, PublicKeyToken=null"
+找到单个程序集: "Lidgren.NetStandard, Version=2012.1.7.0, Culture=neutral, PublicKeyToken=null"
+从以下位置加载: "D:\APP\Steam\steamapps\common\Barotrauma\LocalMods\LuaCsTemplateClone\Refs\Lidgren.NetStandard.dll"
+------------------
+解析: "System.Net.Primitives, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+找到单个程序集: "System.Net.Primitives, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+从以下位置加载: "C:\Users\24564\.nuget\packages\microsoft.netcore.app.ref\8.0.25\ref\net8.0\System.Net.Primitives.dll"
+------------------
+解析: "System.Net.Http, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+找到单个程序集: "System.Net.Http, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+从以下位置加载: "C:\Users\24564\.nuget\packages\microsoft.netcore.app.ref\8.0.25\ref\net8.0\System.Net.Http.dll"
+------------------
+解析: "0Harmony, Version=2.16.0.0, Culture=neutral, PublicKeyToken=null"
+找到单个程序集: "0Harmony, Version=2.16.0.0, Culture=neutral, PublicKeyToken=null"
+从以下位置加载: "C:\Users\24564\.nuget\packages\harmonyx\2.16.0\lib\netstandard2.0\0Harmony.dll"
+------------------
+解析: "System.Runtime.Loader, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+找到单个程序集: "System.Runtime.Loader, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+从以下位置加载: "C:\Users\24564\.nuget\packages\microsoft.netcore.app.ref\8.0.25\ref\net8.0\System.Runtime.Loader.dll"
+------------------
+解析: "OneOf, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null"
+找到单个程序集: "OneOf, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null"
+从以下位置加载: "C:\Users\24564\.nuget\packages\oneof\3.0.271\lib\netstandard2.0\OneOf.dll"
+------------------
+解析: "Microsoft.CodeAnalysis.CSharp, Version=4.11.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35"
+无法按名称“Microsoft.CodeAnalysis.CSharp, Version=4.11.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35”查找 
+------------------
+解析: "Microsoft.CodeAnalysis, Version=4.11.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35"
+无法按名称“Microsoft.CodeAnalysis, Version=4.11.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35”查找 
+------------------
+解析: "LightInject, Version=6.6.4.0, Culture=neutral, PublicKeyToken=null"
+找到单个程序集: "LightInject, Version=6.6.4.0, Culture=neutral, PublicKeyToken=null"
+从以下位置加载: "C:\Users\24564\.nuget\packages\lightinject\6.6.4\lib\net6.0\LightInject.dll"
+------------------
+解析: "System.Reflection.Emit, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+找到单个程序集: "System.Reflection.Emit, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+从以下位置加载: "C:\Users\24564\.nuget\packages\microsoft.netcore.app.ref\8.0.25\ref\net8.0\System.Reflection.Emit.dll"
+------------------
+解析: "RestSharp, Version=106.13.0.0, Culture=neutral, PublicKeyToken=598062e77f915f75"
+无法按名称“RestSharp, Version=106.13.0.0, Culture=neutral, PublicKeyToken=598062e77f915f75”查找 
+------------------
+解析: "System.IO.FileSystem.DriveInfo, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+找到单个程序集: "System.IO.FileSystem.DriveInfo, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+从以下位置加载: "C:\Users\24564\.nuget\packages\microsoft.netcore.app.ref\8.0.25\ref\net8.0\System.IO.FileSystem.DriveInfo.dll"
+------------------
+解析: "System.Text.Encodings.Web, Version=8.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51"
+找到单个程序集: "System.Text.Encodings.Web, Version=8.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51"
+从以下位置加载: "C:\Users\24564\.nuget\packages\microsoft.netcore.app.ref\8.0.25\ref\net8.0\System.Text.Encodings.Web.dll"
+------------------
+解析: "System.Net.Ping, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+找到单个程序集: "System.Net.Ping, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+从以下位置加载: "C:\Users\24564\.nuget\packages\microsoft.netcore.app.ref\8.0.25\ref\net8.0\System.Net.Ping.dll"
+------------------
+解析: "System.Runtime.InteropServices, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+找到单个程序集: "System.Runtime.InteropServices, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+从以下位置加载: "C:\Users\24564\.nuget\packages\microsoft.netcore.app.ref\8.0.25\ref\net8.0\System.Runtime.InteropServices.dll"
+------------------
+解析: "FluentResults, Version=3.16.0.0, Culture=neutral, PublicKeyToken=null"
+找到单个程序集: "FluentResults, Version=3.16.0.0, Culture=neutral, PublicKeyToken=null"
+从以下位置加载: "C:\Users\24564\.nuget\packages\fluentresults\3.16.0\lib\netstandard2.1\FluentResults.dll"
+------------------
+解析: "Sigil, Version=5.0.0.0, Culture=neutral, PublicKeyToken=2d06c3494341c8ab"
+无法按名称“Sigil, Version=5.0.0.0, Culture=neutral, PublicKeyToken=2d06c3494341c8ab”查找 
+------------------
+解析: "System.IO.Compression, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+找到单个程序集: "System.IO.Compression, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"
+从以下位置加载: "C:\Users\24564\.nuget\packages\microsoft.netcore.app.ref\8.0.25\ref\net8.0\System.IO.Compression.dll"
+------------------
+解析: "System.Xml.XmlSerializer, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+找到单个程序集: "System.Xml.XmlSerializer, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+从以下位置加载: "C:\Users\24564\.nuget\packages\microsoft.netcore.app.ref\8.0.25\ref\net8.0\System.Xml.XmlSerializer.dll"
+------------------
+解析: "System.ComponentModel.Primitives, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+找到单个程序集: "System.ComponentModel.Primitives, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+从以下位置加载: "C:\Users\24564\.nuget\packages\microsoft.netcore.app.ref\8.0.25\ref\net8.0\System.ComponentModel.Primitives.dll"
+------------------
+解析: "System.ComponentModel.Annotations, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+找到单个程序集: "System.ComponentModel.Annotations, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+从以下位置加载: "C:\Users\24564\.nuget\packages\microsoft.netcore.app.ref\8.0.25\ref\net8.0\System.ComponentModel.Annotations.dll"
+------------------
+解析: "System.Memory, Version=8.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51"
+找到单个程序集: "System.Memory, Version=8.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51"
+从以下位置加载: "C:\Users\24564\.nuget\packages\microsoft.netcore.app.ref\8.0.25\ref\net8.0\System.Memory.dll"
+------------------
+解析: "Hyper.ComponentModel.NetStandard, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null"
+无法按名称“Hyper.ComponentModel.NetStandard, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null”查找 
+------------------
+解析: "System.Console, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+找到单个程序集: "System.Console, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+从以下位置加载: "C:\Users\24564\.nuget\packages\microsoft.netcore.app.ref\8.0.25\ref\net8.0\System.Console.dll"
+------------------
+解析: "SharpDX, Version=4.2.0.0, Culture=neutral, PublicKeyToken=b4dcf0f35e5521f1"
+无法按名称“SharpDX, Version=4.2.0.0, Culture=neutral, PublicKeyToken=b4dcf0f35e5521f1”查找 
+------------------
+解析: "SharpDX.Direct3D11, Version=4.2.0.0, Culture=neutral, PublicKeyToken=b4dcf0f35e5521f1"
+无法按名称“SharpDX.Direct3D11, Version=4.2.0.0, Culture=neutral, PublicKeyToken=b4dcf0f35e5521f1”查找 
+------------------
+解析: "System.Runtime.Numerics, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+找到单个程序集: "System.Runtime.Numerics, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+从以下位置加载: "C:\Users\24564\.nuget\packages\microsoft.netcore.app.ref\8.0.25\ref\net8.0\System.Runtime.Numerics.dll"
+------------------
+解析: "System.Net.Requests, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+找到单个程序集: "System.Net.Requests, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+从以下位置加载: "C:\Users\24564\.nuget\packages\microsoft.netcore.app.ref\8.0.25\ref\net8.0\System.Net.Requests.dll"
+------------------
+解析: "System.Threading.Tasks.Parallel, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+找到单个程序集: "System.Threading.Tasks.Parallel, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+从以下位置加载: "C:\Users\24564\.nuget\packages\microsoft.netcore.app.ref\8.0.25\ref\net8.0\System.Threading.Tasks.Parallel.dll"
+------------------
+解析: "System.Security.Cryptography, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+找到单个程序集: "System.Security.Cryptography, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+从以下位置加载: "C:\Users\24564\.nuget\packages\microsoft.netcore.app.ref\8.0.25\ref\net8.0\System.Security.Cryptography.dll"
+------------------
+解析: "System.Linq.Parallel, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+找到单个程序集: "System.Linq.Parallel, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+从以下位置加载: "C:\Users\24564\.nuget\packages\microsoft.netcore.app.ref\8.0.25\ref\net8.0\System.Linq.Parallel.dll"
+------------------
+解析: "System.Diagnostics.StackTrace, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+找到单个程序集: "System.Diagnostics.StackTrace, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+从以下位置加载: "C:\Users\24564\.nuget\packages\microsoft.netcore.app.ref\8.0.25\ref\net8.0\System.Diagnostics.StackTrace.dll"
+------------------
+解析: "Microsoft.Toolkit.Diagnostics, Version=7.1.0.0, Culture=neutral, PublicKeyToken=4aff67a105548ee2"
+无法按名称“Microsoft.Toolkit.Diagnostics, Version=7.1.0.0, Culture=neutral, PublicKeyToken=4aff67a105548ee2”查找 
+------------------
+解析: "System.Linq.Expressions, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+找到单个程序集: "System.Linq.Expressions, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+从以下位置加载: "C:\Users\24564\.nuget\packages\microsoft.netcore.app.ref\8.0.25\ref\net8.0\System.Linq.Expressions.dll"
+------------------
+解析: "Basic.Reference.Assemblies.Net80, Version=1.0.0.0, Culture=neutral, PublicKeyToken=00aeae93c2ffe759"
+无法按名称“Basic.Reference.Assemblies.Net80, Version=1.0.0.0, Culture=neutral, PublicKeyToken=00aeae93c2ffe759”查找 
+------------------
+解析: "System.Reflection.Emit.ILGeneration, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+找到单个程序集: "System.Reflection.Emit.ILGeneration, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+从以下位置加载: "C:\Users\24564\.nuget\packages\microsoft.netcore.app.ref\8.0.25\ref\net8.0\System.Reflection.Emit.ILGeneration.dll"
+------------------
+解析: "System.Net.Sockets, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+找到单个程序集: "System.Net.Sockets, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+从以下位置加载: "C:\Users\24564\.nuget\packages\microsoft.netcore.app.ref\8.0.25\ref\net8.0\System.Net.Sockets.dll"
+------------------
+解析: "System.Text.Json, Version=8.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51"
+找到单个程序集: "System.Text.Json, Version=8.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51"
+从以下位置加载: "C:\Users\24564\.nuget\packages\microsoft.netcore.app.ref\8.0.25\ref\net8.0\System.Text.Json.dll"
+------------------
+解析: "System.ObjectModel, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+找到单个程序集: "System.ObjectModel, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+从以下位置加载: "C:\Users\24564\.nuget\packages\microsoft.netcore.app.ref\8.0.25\ref\net8.0\System.ObjectModel.dll"
+------------------
+解析: "Mono.Cecil, Version=0.11.6.0, Culture=neutral, PublicKeyToken=50cebf1cceb9d05e"
+找到单个程序集: "Mono.Cecil, Version=0.11.6.0, Culture=neutral, PublicKeyToken=50cebf1cceb9d05e"
+从以下位置加载: "C:\Users\24564\.nuget\packages\mono.cecil\0.11.6\lib\netstandard2.0\Mono.Cecil.dll"
+------------------
+解析: "Mono.Cecil.Mdb, Version=0.11.6.0, Culture=neutral, PublicKeyToken=50cebf1cceb9d05e"
+找到单个程序集: "Mono.Cecil.Mdb, Version=0.11.6.0, Culture=neutral, PublicKeyToken=50cebf1cceb9d05e"
+从以下位置加载: "C:\Users\24564\.nuget\packages\mono.cecil\0.11.6\lib\netstandard2.0\Mono.Cecil.Mdb.dll"
+------------------
+解析: "Mono.Cecil.Pdb, Version=0.11.6.0, Culture=neutral, PublicKeyToken=50cebf1cceb9d05e"
+找到单个程序集: "Mono.Cecil.Pdb, Version=0.11.6.0, Culture=neutral, PublicKeyToken=50cebf1cceb9d05e"
+从以下位置加载: "C:\Users\24564\.nuget\packages\mono.cecil\0.11.6\lib\netstandard2.0\Mono.Cecil.Pdb.dll"
+------------------
+解析: "Mono.Cecil.Rocks, Version=0.11.6.0, Culture=neutral, PublicKeyToken=50cebf1cceb9d05e"
+找到单个程序集: "Mono.Cecil.Rocks, Version=0.11.6.0, Culture=neutral, PublicKeyToken=50cebf1cceb9d05e"
+从以下位置加载: "C:\Users\24564\.nuget\packages\mono.cecil\0.11.6\lib\netstandard2.0\Mono.Cecil.Rocks.dll"
+------------------
+解析: "MonoMod.Utils, Version=25.0.11.0, Culture=neutral, PublicKeyToken=null"
+找到单个程序集: "MonoMod.Utils, Version=25.0.11.0, Culture=neutral, PublicKeyToken=null"
+从以下位置加载: "C:\Users\24564\.nuget\packages\monomod.utils\25.0.11\lib\net8.0\MonoMod.Utils.dll"
+------------------
+解析: "System.Net.WebHeaderCollection, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+找到单个程序集: "System.Net.WebHeaderCollection, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+从以下位置加载: "C:\Users\24564\.nuget\packages\microsoft.netcore.app.ref\8.0.25\ref\net8.0\System.Net.WebHeaderCollection.dll"
+------------------
+解析: "System.Runtime.CompilerServices.Unsafe, Version=8.0.0.0, Culture=neutral, PublicKeyToken=null"
+找到单个程序集: "System.Runtime.CompilerServices.Unsafe, Version=8.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a"
+从以下位置加载: "C:\Users\24564\.nuget\packages\microsoft.netcore.app.ref\8.0.25\ref\net8.0\System.Runtime.CompilerServices.Unsafe.dll"
+#endif

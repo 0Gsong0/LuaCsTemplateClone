@@ -1,0 +1,109 @@
+TLConfig = TLConfig or {}
+TLConfig.Entries = {} --条目列表
+
+local configDirectoryPath = Game.SaveFolder .. "/ModConfigs"
+local configFilePath = configDirectoryPath .. "/TeraDeepOcean.json"
+
+TLConfig.Entries = {
+    TL_enableCyberDamage = {
+        name = "启用义体损伤",
+        type = "bool",
+        default = true,
+        value = true,
+        description = "是否启用义体损伤系统",
+    },
+    TL_cybDamageMultiplier = {
+        name = "义体伤害倍率",
+        type = "float",
+        default = 1.5,
+        value = 1.5,
+        range = {1, 5},
+        description = "控制义体伤害转换时的倍率",
+    },
+    TL_servoSlowMultiplier = {
+        name = "伺服减速倍率",
+        type = "float",
+        default = 0.5,
+        value = 0.5,
+        range = {0, 2},
+        description = "伺服损伤对移动速度的影响倍率",
+    }
+}
+--本地配置
+function TLConfig.Get(key, default)
+    local entry = TLConfig.Entries[key]
+    if entry ~= nil then
+        return entry.value
+    end
+    return default
+end
+function TLConfig.Set(key, value)
+    local entry = TLConfig.Entries[key]
+    if entry ~= nil then
+        entry.value = value
+    end
+end
+function TLConfig.ResetToDefaults()
+    for key, entry in pairs(TLConfig.Entries) do
+        entry.value = entry.default
+    end
+end
+function TLConfig.SaveConfig()
+    local data = {}
+
+    for key, entry in pairs(TLConfig.Entries) do
+        data[key] = entry.value
+    end
+
+    File.CreateDirectory(configDirectoryPath)
+    File.Write(configFilePath, json.serialize(data))
+end
+function TLConfig.LoadConfig()
+    if not File.Exists(configFilePath) then
+        return
+    end
+
+    local text = File.Read(configFilePath)
+    if text == nil or text == "" then
+        return
+    end
+
+    local data = json.parse(text)
+    if data == nil then
+        return
+    end
+
+    for key, value in pairs(data) do
+        if TLConfig.Entries[key] ~= nil then
+            TLConfig.Entries[key].value = value
+        end
+    end
+end
+--网络请求
+function TLConfig.SendConfig(receiver)
+    local data = {}
+
+    for key, entry in pairs(TLConfig.Entries) do
+        data[key] = entry.value
+    end
+
+    local msg = Networking.Start("TL.ConfigUpdate")
+    msg.WriteString(json.serialize(data))
+
+    if SERVER then
+        Networking.Send(msg, receiver and receiver.Connection or nil)
+    else
+        Networking.Send(msg)
+    end
+end
+
+function TLConfig.ReceiveConfig(msg)
+    local data = json.parse(msg.ReadString())
+    if data == nil then return end
+
+    for key, value in pairs(data) do
+        if TLConfig.Entries[key] ~= nil then
+            TLConfig.Entries[key].value = value
+        end
+    end
+end

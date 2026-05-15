@@ -1,0 +1,27 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<style>
+  <GUILYcorisPicture
+    color="255,255,255,255" hovercolor="200,214,223,255" selectedcolor="163,186,203,255"
+    pressedcolor="90,130,158,255" disabledcolor="125,125,125,125">
+    <Sprite name="GUILYcorisPicture" texture="%ModDir%/Content/ModContent/Events/Lycoris.png"
+      sourcerect="0,0,1024,1024" tile="false" maintainaspectratio="true" origin="0.5,0.5" />
+  </GUILYcorisPicture>
+  <GUILEngineerPicture
+    color="255,255,255,255" hovercolor="200,214,223,255" selectedcolor="163,186,203,255"
+    pressedcolor="90,130,158,255" disabledcolor="125,125,125,125">
+    <Sprite name="GUILEngineerPicture" texture="Content/Map/Outposts/Art/Event_pic4.png" sourcerect="0,512,256,256"
+     tile="false" maintainaspectratio="true" origin="0.5,0.5" />
+  </GUILEngineerPicture>
+  <GUIMedicalPump
+	  color="255,255,255,255" hovercolor="200,214,223,255" selectedcolor="163,186,203,255"
+    pressedcolor="90,130,158,255" disabledcolor="125,125,125,125">
+    <Sprite name="GUILMedicalPump" texture="%ModDir%/Content/Items/Medicals/MedicalPump.png" sourcerect="0,0,620,860"
+     tile="false" maintainaspectratio="true" origin="0.5,0.5" />
+  </GUIMedicalPump>
+  <GUITLCyb_LycorisChip
+	  color="255,255,255,255" hovercolor="200,214,223,255" selectedcolor="163,186,203,255"
+    pressedcolor="90,130,158,255" disabledcolor="125,125,125,125">
+    <Sprite name="GUITLCyb_LycorisChip" texture="%ModDir%/Content/Items/Cyb/TLCybItems.png" sourcerect="0,0,300,354"
+     tile="false" maintainaspectratio="true" origin="0.5,0.5" />
+  </GUITLCyb_LycorisChip>
+</style>

@@ -2,6 +2,8 @@
 <!-- Client-only settings -->
 <Configuration>
     <Settings>
-        <Setting Name="SampleSettingClient" Type="string" Value="This is a sample!" />
+        <!--Setting Name="SampleSettingClient" Type="string" Value="This is a sample!" /-->
+		<Setting Name="EnableDebugPanel" Type="bool" Value="true" />
+		<Setting Name="DebugUpdateInterval" Type="float" Value="1.0" />
     </Settings>
 </Configuration>
