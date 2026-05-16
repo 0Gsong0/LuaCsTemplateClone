@@ -3,7 +3,7 @@
 
 目前处于基础开发阶段
 
->[泰拉渊洋官方Wiki](h[ttps://trello.com/b/Aqla6Gb2/%E6%B3%B0%E6%8B%89%E6%B8%8A%E6%B4%8B-teradeepocean%E5%AE%98%E6%96%B9wiki](https://trello.com/b/Aqla6Gb2/%E6%B3%B0%E6%8B%89%E6%B8%8A%E6%B4%8B-teradeepocean%E5%AE%98%E6%96%B9wiki))
+>[泰拉渊洋官方Wiki](https://trello.com/b/Aqla6Gb2/%E6%B3%B0%E6%8B%89%E6%B8%8A%E6%B4%8B-teradeepocean%E5%AE%98%E6%96%B9wiki)
 
 >[泰拉渊洋Mod官方群](https://qm.qq.com/q/p5uQirhXZC)
 
