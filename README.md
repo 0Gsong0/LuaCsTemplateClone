@@ -1,33 +1,10 @@
-123123
+# TeraDeepOcean - 泰拉渊洋重构版本
+**这是一个大型潜渊症Mod**
 
-This is a project template for making plugin-powered ContentPackages for LuaCsForBarotrauma. For more details,
-visit the Wiki.
+目前处于基础开发阶段
 
-Please see the [Luatrauma Docs](https://luatrauma.github.io/Luatrauma.Docs/cs/setup-assembly-csharp/) for detailed instructions.
+>[泰拉渊洋官方Wiki](h[ttps://trello.com/b/Aqla6Gb2/%E6%B3%B0%E6%8B%89%E6%B8%8A%E6%B4%8B-teradeepocean%E5%AE%98%E6%96%B9wiki](https://trello.com/b/Aqla6Gb2/%E6%B3%B0%E6%8B%89%E6%B8%8A%E6%B4%8B-teradeepocean%E5%AE%98%E6%96%B9wiki))
 
-Quick Start Steps:
+>[泰拉渊洋Mod官方群](https://qm.qq.com/q/p5uQirhXZC)
 
-1. Download the Libraries file [luacsforbarotrauma_refs.zip](https://github.com/evilfactory/LuaCsForBarotrauma/releases) from latest release, unzip it, and place the contents in /Refs as shown below.
-
-- The libraries for this project must be downloaded separately. They can be found in the LuaCsForBarotrauma Steam Workshop
-folder under the subfolder "Publicized". Just copy the ones listed below into "/Refs".
-
-You need to edit the "Build.props" file: 
-
-> <ModDeployDir>..\LUATRAMA_DEBUG_LOCALMODS_MYMODDIR\</ModDeployDir>
-
-Replace "..\LUATRAMA_DEBUG_LOCALMODS_MYMODDIR\" with the absolute path of your mod in "Barotrauma\LocalMods\", ie. "Steam\..\Barotrauma\LocalMods\MyModName\"
-
-> <AssemblyName>MyModName</AssemblyName>
-> <RootNamespace>MyModName</RootNamespace>
-
-Replace "MyModName" with a valid assembly name, this should be similar to your mod name but does not need to match. This name should:
-- Not include spaces.
-- Not include special characters, periods are allowed.
-- Use english characters.
-
-
-2. Set the executable directory for the Launch Configurations (Client, Server).
-
-3. Set your details (modname, files, etc) in Assets/Content/filelist.xml
-- Note: All files should be placed under "/Content" and will be copied automatically to "LocalMods/<YourMod>/...".
+![Logo图片](https://files.trello.com/68a152eef8741fef13f07608/6a07ee88f4417b8127353a35/818d71508e875aeec579271dc0047f82/%E6%B3%B0%E6%8B%89logo.png?Policy=eyJTdGF0ZW1lbnQiOlt7IlJlc291cmNlIjoiaHR0cHM6Ly9maWxlcy50cmVsbG8uY29tLzY4YTE1MmVlZjg3NDFmZWYxM2YwNzYwOC82YTA3ZWU4OGY0NDE3YjgxMjczNTNhMzUvODE4ZDcxNTA4ZTg3NWFlZWM1NzkyNzFkYzAwNDdmODIvJUU2JUIzJUIwJUU2JThCJTg5bG9nby5wbmciLCJDb25kaXRpb24iOnsiRGF0ZUxlc3NUaGFuIjp7IkFXUzpFcG9jaFRpbWUiOjE3Nzg5MDUyMDB9LCJEYXRlR3JlYXRlclRoYW4iOnsiQVdTOkVwb2NoVGltZSI6MTc3ODkwNDU5OX19fV19&Key-Pair-Id=K28SYADB5F0657&Signature=Twj2lGpFDE3oqBxhHBlrMyRO5g4ANtuDwZfMVCS3RgZfMC9lFvciswvd3NyUZhhCuU5pHMz9TUqYUHiRmxCg69T4bjE6~s16Un4goFctxiEw8mJ530Nl4bJdbK-QBLcKDjrc9AsDHqNvEDGQTYealSE9pW~o6u8~8pm3fB58KUGmh2rAXjyRLqUqNQeOdPE5rXBH1mey5NXaVfVzXyaQzDuJNQwCWYolSdBgLjEasdKxgcP5dpJR5M2hNcjQcRC3BVrtZ~apakGzIf1l9ItYq4vo5KYzP58c2oKQ3dKbRNnsEplCDIPWWZqC~qp8-VBOWsjaAcAfnV4oZZASWgw1eA__)
