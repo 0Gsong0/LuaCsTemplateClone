@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Items>
+  <!-- 潜渊症矿物 (格式参照)
+  <Item name="潜渊晶体" identifier="AbyssalCrystal_TL" category="Material" 
+        maxstacksize="16" maxstacksizecharacterinventory="8" Tags="smallitem,mineral,ore" 
+        canbepicked="true" cargocontaineridentifier="metalcrate" scale="0.5" 
+        impactsoundtag="impact_metal_light" description="">
+    
+    商店配置
+    <PreferredContainer primary="storagecab" />
+    <PreferredContainer secondary="wreckstoragecab,abandonedstoragecab,piratestoragecab" 
+                       minamount="1" maxamount="2" spawnprobability="0.05" />
+    
+    <Price baseprice="500" minleveldifficulty="20">
+      <Price storeidentifier="merchantoutpost" multiplier="1.3" />
+      <Price storeidentifier="merchantcity" multiplier="1.25" minavailable="1" />
+      <Price storeidentifier="merchantresearch" multiplier="1.1" minavailable="1" />
+      <Price storeidentifier="merchantmilitary" multiplier="0.9" minavailable="2" />
+      <Price storeidentifier="merchantmine" multiplier="0.9" minavailable="3" />
+      <Price storeidentifier="TLarmory" multiplier="0.8" minavailable="5" />
+    </Price>
+    
+    物品显示
+    <InventoryIcon texture="%ModDir%/Content/Items/Materials/Minerals.png" 
+                   sourcerect="0,0,64,64" origin="0.5,0.5" />
+    <Sprite texture="%ModDir%/Content/Items/Materials/Minerals.png" 
+            sourcerect="0,0,40,40" depth="0.55" origin="0.5,0.5" />
+    
+    物理属性
+    <Body width="40" height="40" density="25" />
+    
+    矿物作为地形资源的配置
+    <LevelResource deattachduration="1" randomoffsetfromwall="40">
+      <Commonness commonness="0.1" cavecommonness="0.2" abysscommonness="0.6" />
+    </LevelResource>
+    
+    可拾取配置
+    <Holdable canBeCombined="true" slots="Any,RightHand,LeftHand" handle1="0,0" 
+              msg="ItemMsgPickUpSelect" pickingtime="3" attachable="true" reattachable="false">
+      <StatusEffect type="OnBroken" target="This">
+        <Remove />
+      </StatusEffect>
+    </Holdable>
+  </Item>
+  -->
+
+  <!-- 更多潜渊症相关矿物可在下面添加 -->
+<Item name="红化晶矿" identifier="Rubed_Crystal" category="Material" 
+        maxstacksize="16" maxstacksizecharacterinventory="8" Tags="smallitem,mineral,ore" 
+        canbepicked="true" cargocontaineridentifier="metalcrate" scale="0.5" 
+        impactsoundtag="impact_metal_light" description="">
+    
+    商店配置
+    <PreferredContainer primary="storagecab" />
+    <PreferredContainer secondary="wreckstoragecab,abandonedstoragecab,piratestoragecab" 
+                       minamount="1" maxamount="2" spawnprobability="0.05" />
+    
+    <Price baseprice="500" minleveldifficulty="20">
+      <Price storeidentifier="merchantoutpost" multiplier="1.3" />
+      <Price storeidentifier="merchantcity" multiplier="1.25" minavailable="1" />
+      <Price storeidentifier="merchantresearch" multiplier="1.1" minavailable="1" />
+      <Price storeidentifier="merchantmilitary" multiplier="0.9" minavailable="2" />
+      <Price storeidentifier="merchantmine" multiplier="0.9" minavailable="3" />
+      <Price storeidentifier="TLarmory" multiplier="0.8" minavailable="5" />
+    </Price>
+    
+    物品显示
+    <InventoryIcon texture="%ModDir%/Content/Items/Materials/Minerals.png" 
+                   sourcerect="0,0,64,64" origin="0.5,0.5" />
+    <Sprite texture="%ModDir%/Content/Items/Materials/Minerals.png" 
+            sourcerect="0,0,40,40" depth="0.55" origin="0.5,0.5" />
+    
+    物理属性
+    <Body width="40" height="40" density="25" />
+    
+    矿物作为地形资源的配置
+    <LevelResource deattachduration="1" randomoffsetfromwall="40">
+      <Commonness commonness="0.1" cavecommonness="0.2" abysscommonness="0.6" />
+    </LevelResource>
+    
+    可拾取配置
+    <Holdable canBeCombined="true" slots="Any,RightHand,LeftHand" handle1="0,0" 
+              msg="ItemMsgPickUpSelect" pickingtime="3" attachable="true" reattachable="false">
+      <StatusEffect type="OnBroken" target="This">
+        <Remove />
+      </StatusEffect>
+    </Holdable>
+  </Item>
+
+
+</Items>
