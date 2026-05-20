@@ -43,6 +43,7 @@ namespace TeraDeepOcean
         private double lastGuiRefreshTime = 0.0;
         private double lastWorkbenchUpdateTime = 0.0;
         public TLConfig Config { get; private set; }
+        public GUIButton testWall;
         partial void InitProjSpecific()
         {
             Config = new TLConfig(
@@ -50,7 +51,12 @@ namespace TeraDeepOcean
                 PluginService,
                 LoggerService
             );
-            
+            LuaCsSetup.Instance.Hook.Add("roundStart", "TeraDeepOcean.WallMoverReset", args =>
+            {
+                TLWallHelper.Reset();
+                LuaCsLogger.Log("TLWallMoverSystem reset on roundStart.");
+                return null;
+            });
             LuaCsSetup.Instance.Hook.Add("think", "TeraDeepOcean.CyberDiagnoserV1", (object[] args) =>
             {
                 CreateDebugButton();
@@ -74,6 +80,7 @@ namespace TeraDeepOcean
                     lastGuiRefreshTime = accumulatedTime;
                     UpdateWorkbenchUI(accumulatedTime);
                 }
+                TLWallHelper.Update((float)deltaTime);
                 return null;
             });
             LuaCsSetup.Instance.Hook.Patch("Barotrauma.CharacterHealth", "ApplyDamage", (instance, ptable) =>
@@ -114,17 +121,18 @@ namespace TeraDeepOcean
             );
             debugButtonFrame.RectTransform.AbsoluteOffset = new Point(0, 80);
 
-            openWorkbenchButton = new GUIButton(
-                new RectTransform(Microsoft.Xna.Framework.Vector2.One, debugButtonFrame.RectTransform),
-                "义体调试终端",
-                textAlignment: Alignment.Center,
-                style: "GUIButton"
-            );
-            openWorkbenchButton.OnClicked = (button, obj) =>
-            {
-                ToggleWorkbench();
-                return true;
-            };
+            //openWorkbenchButton = new GUIButton(
+            //    new RectTransform(Microsoft.Xna.Framework.Vector2.One, debugButtonFrame.RectTransform),
+            //    "义体调试终端",
+            //    textAlignment: Alignment.Center,
+            //    style: "GUIButton"
+            //);
+
+            //openWorkbenchButton.OnClicked = (button, obj) =>
+            //{
+            //    ToggleWorkbench();
+            //    return true;
+            //};
             buttonCreated = true;
 
         }

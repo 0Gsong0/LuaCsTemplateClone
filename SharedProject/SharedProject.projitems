@@ -16,5 +16,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)SharedSource\TLHelpe.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)SharedSource\TLCyb_LycorisChip_Recovery.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)SharedSource\TLLib_Shared.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)SharedSource\TLWallHelper.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)SharedSource\TLWallMoverComponent.cs" />
   </ItemGroup>
 </Project>
