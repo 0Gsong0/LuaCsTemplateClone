@@ -261,6 +261,7 @@ namespace TeraDeepOcean
                 AddSectionTitle(rightList.Content, "TL_header_System");
                 AddIntSetting(rightList.Content, "TL_TLUpdateInterval", 2, 1, 5);
                 AddIntSetting(rightList.Content, "TL_TLLateUpdateInterval", 2, 1, 10);
+                AddBoolSetting(rightList.Content, "TL_TLDebugModel", false);
             }
             else if (currentTab == ConfigTab.Cyber)
             {

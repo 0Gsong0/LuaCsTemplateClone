@@ -243,10 +243,16 @@ end
 
 --作为服务端
 if SERVER then
+    TLConfig.LoadConfig()
     Networking.Receive("TL.ConfigRequest", function(msg, sender)
         if not sender then return end
+
+        TLConfig.LoadConfig()
+        print("[TL_SV] TLConfig--正在发送配置文件至客户端： " .. sender.Name)
         TLConfig.SendConfig(sender)
     end)
+
+
 
     Networking.Receive("TL.ConfigUpdate", function(msg, sender)
         if not sender then return end

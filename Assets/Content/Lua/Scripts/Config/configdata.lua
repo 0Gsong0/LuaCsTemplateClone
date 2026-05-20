@@ -24,6 +24,12 @@ TLConfig.Entries = {
         range = {1, 10},
         description = Lib.ReadXmlRichText("config.des.TL_TLLateUpdateInterval")
     },
+    TL_TLDebugModel = {
+        name = Lib.ReadXmlRichText("config.TL_TLDebugModel"),
+        type = "bool",
+        default = false,
+        description = Lib.ReadXmlRichText("config.des.TL_TLDebugModel")
+    },
     TL_TLDeltaTime = {
         name = "默认帧间隔",
         type = "show",
@@ -155,7 +161,9 @@ end
 function TLConfig.SendConfig(receiver)
     local msg = Networking.Start("TL.ConfigUpdate")
     msg.WriteString(json.serialize(TLConfig.Values))
-
+    if TLConfig.Get("TL_TLDebugModel") then
+        print("读取到配置文件内容："..json.serialize(TLConfig.Values))
+    end
     if SERVER then
         Networking.Send(msg, receiver and receiver.Connection or nil)
     else

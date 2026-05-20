@@ -1280,5 +1280,7 @@
 	<config.configModel.Edit>当前为编辑模式：你有权修改配置并上传保存。</config.configModel.Edit>
 	<config.gameModel.sing>当前为单机模式：当前配置内容来自本地，修改后会保存在这台电脑上。</config.gameModel.sing>
 	<config.gameModel.server>当前为联机模式：当前配置内容来自服务器，修改后将会上传至服务器并保存。</config.gameModel.server>
-	<config.choose>请选择左侧分类，多人模式下请勿同时修改配置文件</config.choose>
+	<config.choose>请选择左侧分类</config.choose>
+	<config.TL_TLDebugModel>启用调试模式</config.TL_TLDebugModel>
+	<config.des.TL_TLDebugModel>启用调试模式，将打印出代码运行时的参数内容，开发者专用</config.des.TL_TLDebugModel>
 </infotexts>
