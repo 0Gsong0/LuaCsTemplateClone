@@ -16,7 +16,9 @@ Hook.Add("item.applyTreatment", "TLCyber.applyInstall", function(item, usingChar
     if (methodtorun ~= nil) then
         -- run said function
         methodtorun(item, usingCharacter, targetCharacter, limb)
-        print("TLCyb.Install执行完成：" .. identifier)
+        if TLConfig.Get("TL_TLDebugModel",false) then
+             print("TLCyb.Item执行完成：" .. identifier.." usingCharacter" .. usingCharacter.Name.." targetCharacter"..targetCharacter.Name.." limb："..limb.type)
+        end
         return
     end
 
@@ -26,7 +28,7 @@ Hook.Add("item.applyTreatment", "TLCyber.applyInstall", function(item, usingChar
     --     TLHF.RemoveItem(item)
     -- end
 end)
---Lycoris
+--Lycoris   
 TLCyb.Item.TLCyb_LycorisChip = function(item, usingCharacter, targetCharacter, limb)
     if limb.type ~= LimbType.Head then return end
     if not TLCyb.HF.IsInstallLycoris(targetCharacter) then
@@ -42,7 +44,7 @@ end
 --曼珠·[加速学习协议]
 TLCyb.Item.TLCyb_LycorisChip_Learning = function(item, usingCharacter, targetCharacter, limb)
     if limb.type ~= LimbType.Head then return end
-    if TLCyb.HF.IsInstallLycoris(targetCharacter) then
+    if TLCyb.HF.IsInstallLycoris(targetCharacter) and not TLHF.HasAffliction(targetCharacter, "TLCyb_LycorisChip_Learning_Init") then
         TLCyb.HF.InstallCybLimb(targetCharacter, limb, "TLCyb_LycorisChip_Learning_Init")
         TLHF.PlaySound("TLCyb_NewModel_Init_Sound", targetCharacter)
         if targetCharacter == Character.Controlled then
@@ -55,7 +57,7 @@ end
 --曼珠·[执行强化模块]
 TLCyb.Item.TLCyb_LycorisChip_Skill = function(item, usingCharacter, targetCharacter, limb)
     if limb.type ~= LimbType.Head then return end
-    if TLCyb.HF.IsInstallLycoris(targetCharacter) then
+    if TLCyb.HF.IsInstallLycoris(targetCharacter) and not TLHF.HasAffliction(targetCharacter, "TLCyb_LycorisChip_Skill_Init") then
         TLCyb.HF.InstallCybLimb(targetCharacter, limb, "TLCyb_LycorisChip_Skill_Init")
         TLHF.PlaySound("TLCyb_NewModel_Init_Sound", targetCharacter)
         if targetCharacter == Character.Controlled then
@@ -68,7 +70,7 @@ end
 --曼珠·[应激缓冲模块]
 TLCyb.Item.TLCyb_LycorisChip_Stress = function(item, usingCharacter, targetCharacter, limb)
     if limb.type ~= LimbType.Head then return end
-    if TLCyb.HF.IsInstallLycoris(targetCharacter) then
+    if TLCyb.HF.IsInstallLycoris(targetCharacter) and not TLHF.HasAffliction(targetCharacter, "TLCyb_LycorisChip_Stress_Init") then
         TLCyb.HF.InstallCybLimb(targetCharacter, limb, "TLCyb_LycorisChip_Stress_Init")
         TLHF.PlaySound("TLCyb_NewModel_Init_Sound", targetCharacter)
         if targetCharacter == Character.Controlled then
@@ -81,7 +83,7 @@ end
 --曼珠·[代谢调节模块]
 TLCyb.Item.TLCyb_LycorisChip_Metabolic = function(item, usingCharacter, targetCharacter, limb)
     if limb.type ~= LimbType.Head then return end
-    if TLCyb.HF.IsInstallLycoris(targetCharacter) then
+    if TLCyb.HF.IsInstallLycoris(targetCharacter) and not TLHF.HasAffliction(targetCharacter, "TLCyb_LycorisChip_Metabolic_Init") then
         TLCyb.HF.InstallCybLimb(targetCharacter, limb, "TLCyb_LycorisChip_Metabolic_Init")
         TLHF.PlaySound("TLCyb_NewModel_Init_Sound", targetCharacter)
         if targetCharacter == Character.Controlled then
@@ -94,7 +96,7 @@ end
 --曼珠·终止-[回收协议]
 TLCyb.Item.TLCyb_LycorisChip_Recovery = function(item, usingCharacter, targetCharacter, limb)
     if limb.type ~= LimbType.Head then return end
-    if TLCyb.HF.IsInstallLycoris(targetCharacter) then
+    if TLCyb.HF.IsInstallLycoris(targetCharacter) and not TLHF.HasAffliction(targetCharacter, "TLCyb_LycorisChip_Recovery_Init") then
         TLCyb.HF.InstallCybLimb(targetCharacter, limb, "TLCyb_LycorisChip_Recovery_Init")
         TLHF.PlaySound("TLCyb_NewModel_Init_Sound", targetCharacter)
         if targetCharacter == Character.Controlled then
@@ -107,7 +109,7 @@ end
 --曼珠重启
 TLCyb.Item.TLCyb_LycorisChipRestart = function(item, usingCharacter, targetCharacter, limb)
     if limb.type ~= LimbType.Head then return end
-    if TLCyb.HF.IsInstallLycoris(targetCharacter) then
+    if TLCyb.HF.IsInstallLycoris(targetCharacter) and not TLHF.HasAffliction(targetCharacter, "TLCyb_LycorisChipRestart_Init") then
         TLHF.SetAffliction(targetCharacter, "TL_StunState", 5)
         TLHF.SetAffliction(targetCharacter,"TLCyb_LycorisSystemDamage",0)
         TLHF.PlaySound("TLCyb_LycorisChipRestart", targetCharacter)
