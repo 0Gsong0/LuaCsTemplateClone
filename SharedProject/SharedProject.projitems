@@ -18,5 +18,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)SharedSource\TLLib_Shared.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)SharedSource\TLWallHelper.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)SharedSource\TLWallMoverComponent.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)SharedSource\TLItemHelper.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)SharedSource\TLItemMoverComponent.cs" />
   </ItemGroup>
 </Project>

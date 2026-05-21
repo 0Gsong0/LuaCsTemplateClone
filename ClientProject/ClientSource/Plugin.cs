@@ -54,6 +54,7 @@ namespace TeraDeepOcean
             LuaCsSetup.Instance.Hook.Add("roundStart", "TeraDeepOcean.WallMoverReset", args =>
             {
                 TLWallHelper.Reset();
+                TLItemHelper.Reset();
                 LuaCsLogger.Log("TLWallMoverSystem reset on roundStart.");
                 return null;
             });
@@ -81,6 +82,7 @@ namespace TeraDeepOcean
                     UpdateWorkbenchUI(accumulatedTime);
                 }
                 TLWallHelper.Update((float)deltaTime);
+                TLItemHelper.Update((float)deltaTime);
                 return null;
             });
             LuaCsSetup.Instance.Hook.Patch("Barotrauma.CharacterHealth", "ApplyDamage", (instance, ptable) =>

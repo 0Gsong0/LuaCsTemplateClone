@@ -16,9 +16,19 @@ namespace TeraDeepOcean
             public bool IsUp;
             public bool IsMoving;
             public float Speed;
+            public int MoveDirection;
         }
         private static readonly Dictionary<ushort, MoveTask> Tasks = new Dictionary<ushort, MoveTask>();
-        public static void ToggleWalls(IEnumerable<Structure> walls, float moveDistance, float speed)
+        private static Vector2 GetMoveOffset(float moveDistance, int moveDirection)
+        {
+            if (moveDirection == 1)
+            {
+                return new Vector2(moveDistance, 0f);
+            }
+
+            return new Vector2(0f, -moveDistance);
+        }
+        public static void ToggleWalls(IEnumerable<Structure> walls, float moveDistance, float speed, int moveDirection = 0)
         {
             bool anyMoving = false;
 
@@ -29,7 +39,7 @@ namespace TeraDeepOcean
                 if (!Tasks.TryGetValue(id, out MoveTask task))
                 {
                     Vector2 bottom = wall.Position;
-                    Vector2 top = bottom + new Vector2(0f, -moveDistance);
+                    Vector2 top = bottom + GetMoveOffset(moveDistance, moveDirection);
 
                     task = new MoveTask
                     {
@@ -39,7 +49,8 @@ namespace TeraDeepOcean
                         TargetPosition = top,
                         IsUp = false,
                         IsMoving = false,
-                        Speed = speed
+                        Speed = speed,
+                        MoveDirection = moveDirection
                     };
 
                     Tasks[id] = task;
@@ -49,7 +60,7 @@ namespace TeraDeepOcean
                     if (task.Wall == null || task.Wall.Removed)
                     {
                         Vector2 bottom = wall.Position;
-                        Vector2 top = bottom + new Vector2(0f, -moveDistance);
+                        Vector2 top = bottom + GetMoveOffset(moveDistance, moveDirection);
 
                         task.Wall = wall;
                         task.BottomPosition = bottom;
@@ -57,6 +68,7 @@ namespace TeraDeepOcean
                         task.TargetPosition = top;
                         task.IsUp = false;
                         task.IsMoving = false;
+                        task.MoveDirection = moveDirection;
                     }
                 }
 
@@ -77,14 +89,14 @@ namespace TeraDeepOcean
                 task.Speed = speed;
             }
         }
-        public static void ToggleWallByTag(string tag, float moveDistance, float speed = 2f)
+        public static void ToggleWallByTag(string tag, float moveDistance, float speed = 2f,int moveDirection = 0)
         {
 
             var walls = Structure.WallList
                 .Where(s => s != null && s.Tags != null && s.Tags.Contains(tag) && !s.Removed)
                 .ToList();
 
-            ToggleWalls(walls, moveDistance, speed);
+            ToggleWalls(walls, moveDistance, speed,moveDirection);
         }
         public static void Reset()
         {

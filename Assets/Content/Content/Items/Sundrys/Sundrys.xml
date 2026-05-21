@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Items>
-	<Item name="墙体移动组件" identifier="tl_wall_controller" linkable="true" allowedlinks="shella0deg1" category="Electrical" Tags="smallitem,logic" scale="0.5">
+	<Item name="墙体移动组件" identifier="tl_wall_mover_controller" linkable="true" allowedlinks="" category="Electrical" Tags="smallitem,logic" scale="0.5">
 		<Sprite texture="Content/Items/Electricity/signalcomp.png" sourcerect="0,0,64,64" depth="0.8" origin="0.5,0.5" />
 		<Body width="48" height="48" density="20" />
 		<Holdable slots="Any,RightHand,LeftHand" attachable="true" handle1="0,0" msg="ItemMsgPickUpSelect" >
@@ -12,9 +12,21 @@
 			<input name="trigger_in" displayname="Trigger In" />
 			<output name="state_out" displayname="State Out" />
 		</ConnectionPanel>
-		<TLWallMoverComponent movedistance="-64" speed="2"/>
+		<TLWallMoverComponent movedistance="-64" speed="2" movedirection="0"/>
 	</Item>
-	
+	<Item name="物品移动组件" identifier="tl_item_mover_controller" category="Electrical" Tags="smallitem,logic" scale="0.5" linkable="true">
+		<Sprite texture="Content/Items/Electricity/signalcomp.png" sourcerect="0,0,64,64" depth="0.8" origin="0.5,0.5" />
+		<Body width="48" height="48" density="20" />
+		<Holdable selectkey="Select" pickkey="Use" slots="Any,RightHand,LeftHand" msg="ItemMsgDetachWrench" MsgWhenDropped="ItemMsgPickupSelect" PickingTime="5.0" aimpos="65,-10" handle1="0,0" attachable="true" aimable="true">
+			<RequiredItem items="wrench" excludeditems="multitool" type="Equipped" />
+		</Holdable>
+		<ConnectionPanel selectkey="Action" canbeselected="true" msg="ItemMsgRewireScrewdriver" hudpriority="10">
+			<GuiFrame relativesize="0.2,0.32" minsize="400,350" maxsize="480,420" anchor="Center" style="ConnectionPanel" />
+			<RequiredItem items="screwdriver" type="Equipped" />
+			<input name="trigger_in" displayname="Trigger In" />
+		</ConnectionPanel>
+		<TLItemMoverComponent movedirection="0" movedistance="-64" speed="2" />
+	</Item>
 	
   <Item name="高级手持声纳信标" identifier="sonarbeacon_TL" category="Equipment,Diving" Tags="smallitem,sonar,provocative" cargocontaineridentifier="metalcrate" Scale="0.5" impactsoundtag="impact_metal_light">
     <PreferredContainer secondary="wreckstoragecab,wreckdivingcab" amount="1" spawnprobability="0.05" />

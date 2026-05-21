@@ -1,13 +1,13 @@
 using Barotrauma.Items.Components;
-using Barotrauma;
-using Microsoft.Xna.Framework;
+
 namespace TeraDeepOcean
 {
-    class TLWallMoverComponent : ItemComponent
+    class TLItemMoverComponent : ItemComponent
     {
         [Serialize(0, IsPropertySaveable.Yes, description: "移动方向：0=垂直，1=水平")]
         [Editable(MinValueInt = 0, MaxValueInt = 1)]
         public int MoveDirection { get; set; } = 0;
+
         [Serialize(64.0f, IsPropertySaveable.Yes, description: "移动距离，单位像素")]
         [Editable(MinValueFloat = -4096f, MaxValueFloat = 4096f, DecimalCount = 1)]
         public float MoveDistance { get; set; } = 64f;
@@ -15,22 +15,23 @@ namespace TeraDeepOcean
         [Serialize(2.0f, IsPropertySaveable.Yes, description: "移动速度")]
         [Editable(MinValueFloat = 0.1f, MaxValueFloat = 128f, DecimalCount = 1)]
         public float Speed { get; set; } = 2f;
-        public TLWallMoverComponent(Item item, ContentXElement element) : base(item, element)
+
+        public TLItemMoverComponent(Item item, ContentXElement element) : base(item, element)
         {
         }
-        private List<Structure> GetLinkedWalls()
+        private List<Item> GetLinkedItems()
         {
-            List<Structure> walls = new List<Structure>();
+            List<Item> items = new List<Item>();
 
             foreach (MapEntity linked in item.linkedTo)
             {
-                if (linked is Structure structure && !structure.Removed)
+                if (linked is Item linkedItem && linkedItem != item && !linkedItem.Removed)
                 {
-                    walls.Add(structure);
+                    items.Add(linkedItem);
                 }
             }
 
-            return walls;
+            return items;
         }
         public override void ReceiveSignal(Signal signal, Connection connection)
         {
@@ -39,11 +40,8 @@ namespace TeraDeepOcean
             if (connection == null) { return; }
             if (connection.Name != "trigger_in") { return; }
 
-            if (connection.Name == "trigger_in")
-            {
-                List<Structure> walls = GetLinkedWalls();
-                TLWallHelper.ToggleWalls(walls, MoveDistance, Speed, MoveDirection);
-            }
+            List<Item> items = GetLinkedItems();
+            TLItemHelper.ToggleItems(items, MoveDistance, Speed, MoveDirection);
         }
     }
 }
